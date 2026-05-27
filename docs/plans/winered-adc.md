@@ -234,7 +234,20 @@ Per `feedback_commit_plan_before_execution.md` and `feedback_per_phase_commits.m
 - **Phase 7 — CLI + integration.** `cli.py` entry point, end-to-end integration test (sim PLC + sim TCS + WS client), update `docs/running.md` and `docs/architecture.md`.
 - **Phase 8 — TwinCAT project.** Complete `plc/WineredADC/` solution: GVL_IO with `TcLinkTo`, GVL_Cmd, GVL_State, GVL_Cfg, FB_Slide + FB_SlideSim, FB_Rotator + FB_RotatorSim, FB_AdcController, MAIN, NC axis setup. Update `docs/plc.md` (PLC side) and `docs/hardware.md`. Single phase because it's one coherent TwinCAT artifact.
 
-After Phase 8, the bench/instrument steps in Verification become applicable.
+- **Phase 9 — UI compatibility + standalone diagnostic page.** Two parts in one commit:
+
+  *Part A — server alignment with the canonical client.* `lco-instrument-web` already has an ADC entry in `APP_REGISTRY` (`diagnostic.js`) keyed `"ADC"` (uppercase) and using snake_case command names. The server currently emits `app: "adc"` (lowercase) and registers camelCase command names, so the canonical client reports "No command registry for app 'adc'". Bring the server into line:
+    - Change `APP_NAME` to `"ADC"` in `ws/envelope.py`.
+    - Rename commands in `ws/commands.py` to match the registry: `set_adc_insertion`, `set_other_insertion`, `set_control_mode`, `move_lens`, `set_auto_update`, `trigger_manual_update`, `set_running`, plus a new `version`.
+    - Match argument shapes: `pos: "in"|"out"`, `lens: "A"|"B"` (uppercase), `angle: float`, `mode: "auto"|"off"`, `enabled: bool`, `running: bool`.
+    - Implement `version` (returns `{version, protocol_version, app}`) and `set_running` (aliases `set_control_mode` `auto`/`off` — same observable behavior, no new state invented for v1).
+    - Update `tests/test_ws_protocol.py` and `tests/test_integration.py` to the new names/shapes.
+
+  *Part B — standalone diagnostic SPA at `web/diagnostic.html`.* A single HTML file (no build, no framework, no dependencies) for on-bench use when the full `lco-instrument-web` checkout isn't handy. Connects to `ws://<host>:<port>` per query params, subscribes to all topics, renders the live state and a log pane, exposes a button per registry command. Static — open in a browser (or `python3 -m http.server` from the repo root).
+
+  Docs: update `docs/protocol.md` to reflect the snake_case command names; add a short `docs/diagnostic.md` describing the standalone page and when to prefer it vs. the canonical client.
+
+After Phase 8, the bench/instrument steps in Verification become applicable. After Phase 9, both UI paths (canonical client + standalone) work without further server changes.
 
 ## Verification
 
