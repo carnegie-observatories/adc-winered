@@ -1,1 +1,6 @@
-"""LCO WebSocket protocol server. Implemented in phase 6."""
+"""LCO WebSocket protocol server (ADC scope)."""
+
+from .logs import LogBuffer
+from .server import WsServer
+
+__all__ = ["LogBuffer", "WsServer"]
