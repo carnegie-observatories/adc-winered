@@ -1,8 +1,8 @@
 # PLC layer
 
-The PLC half of the stack has two views: the ADS surface seen by the Python server, and the TwinCAT project that exposes it. This page covers the Python-facing surface and the driver swap. The TwinCAT project layout, GVL files, and FBs are described once they land in phase 8.
+The PLC half of the stack has two views: the ADS surface seen by the Python server, and the TwinCAT project that exposes it.
 
-## Driver interface
+## Driver interface (Python side)
 
 The controller depends on `adc_winered.plc.PlcDriver` (a `Protocol`). Two implementations:
 
@@ -25,7 +25,7 @@ Both expose the same coroutines:
 
 ## ADS symbol layout
 
-The client expects exactly these symbols on the PLC. They must be declared in `GVL_State` (read-only) and `GVL_Cmd` (read/write) in the TwinCAT project.
+The client expects exactly these symbols on the PLC. They are declared in `plc/GVLs/GVL_State.st` (read-only) and `plc/GVLs/GVL_Cmd.st` (read/write).
 
 ### `GVL_State` (read by Python)
 
@@ -52,19 +52,47 @@ bAxisA_Reset / bAxisB_Reset : BOOL
 bSlideA_Deploy / bSlideB_Deploy : BOOL   // level: TRUE = IN
 ```
 
-If you change a symbol name, change both the `GVL_*` declaration and the `_AXIS_SYMBOLS` / `_SLIDE_SYMBOLS` tables in `plc_client.py`. Keep the two in lockstep.
+If you change a symbol name, change both the `.st` declaration and the `_AXIS_SYMBOLS` / `_SLIDE_SYMBOLS` tables in `plc_client.py`. Keep the two in lockstep.
 
-## Simulator behaviour
+## TwinCAT project layout
 
-`PlcSim` models the same physical effects as `FB_RotatorSim` / `FB_SlideSim` will on the PLC side:
+All ST source lives in [`plc/`](../plc/). The System Manager configuration (EtherCAT topology, NC axis parameters, `TcLinkTo` link paths) is established once in XAE per [`plc/SYSTEM_MANAGER.md`](../plc/SYSTEM_MANAGER.md).
 
-- Rotators slew at a constant `rotator_velocity_deg_s` (default 30 °/s) toward the target; `busy`/`done` follow MC2 semantics.
-- Slides transition through `MOVING` for `slide_settle_s` (default 0.5 s) before reporting `IN`/`OUT`.
-- Time is read from an injectable clock — tests pass a fake clock to drive the simulation deterministically.
-- `read()` advances the simulation, so tests that don't read don't tick.
+```
+plc/
+  Types/E_SlideState.st         # enum on the wire
+  GVLs/
+    GVL_IO.st                   # variables linked via TcLinkTo to EL2002/EL1084
+    GVL_State.st                # ADS read surface
+    GVL_Cmd.st                  # ADS write surface
+    GVL_Cfg.st                  # tunables + bSimulate
+  POUs/
+    FB_Slide.st                 # real solenoid driver + limit-switch decoder
+    FB_SlideSim.st              # software-only slide (settle timer)
+    FB_Rotator.st               # Tc2_MC2 wrapper around an NC axis
+    FB_RotatorSim.st            # software-only rotator (integrates position)
+    FB_AdcController.st         # composition root, dispatches by bSimulate
+    MAIN.st                     # entry; one FB_AdcController instance
+```
 
-The PLC's `FB_*Sim` variants must keep the same observable behaviour (same units, same state-machine transitions). If the two diverge, end-to-end tests against `PlcSim` won't catch bugs in the real PLC path.
+`FB_AdcController` is the **only** place that reads/writes `GVL_State` and `GVL_Cmd`. Other POUs accept their inputs as `VAR_INPUT` and return outputs via `VAR_OUTPUT`. This keeps the ADS-visible state machine concentrated and reviewable.
 
-## TwinCAT project
+## Sim parity
 
-Filled in during phase 8. The placeholder remains so the file can be linked from the docs index from day one.
+`FB_RotatorSim` integrates position at `rRotatorVelocity * rCycleSeconds` per cycle and toggles `bBusy`/`bDone` like `MC_MoveAbsolute`. `FB_SlideSim` reports `MOVING` for `tSimSlideSettle`, then settles to `IN` / `OUT`. The Python-side `PlcSim` mirrors the same physics — so end-to-end tests against `PlcSim` exercise the same observable behaviour the PLC will produce.
+
+When you change one sim, change the other. The contract is "same observable state for the same inputs", measured at `GVL_State` / `PlcSnapshot`.
+
+## Library dependencies
+
+- **Tc2_MC2** — motion control. `MC_Power`, `MC_MoveAbsolute`, `MC_Stop`, `MC_Home`, `MC_Reset`, `MC_ReadStatus`, `MC_ReadActualPosition`. Spec: https://infosys.beckhoff.com/english.php?content=../content/1033/tcplclib_tc2_mc2/70049419.html
+- **Tc2_Standard** — `R_TRIG`, `TON`.
+
+## Bring-up checklist
+
+1. Import the `.st` files into a TwinCAT 3 XAE solution.
+2. Follow [`plc/SYSTEM_MANAGER.md`](../plc/SYSTEM_MANAGER.md) for EtherCAT scan, NC axis setup, and link wiring.
+3. Set `GVL_Cfg.bSimulate := TRUE` for a first dry run; activate the config and confirm `GVL_State.bHeartbeat` toggles.
+4. Set `bSimulate := FALSE`, deploy each slide individually, watch limit-switch transitions.
+5. Run an `MC_Home` on each axis to find the encoder Z-pulse and set the home offset.
+6. Start the Python server (`ADC_PLC_MODE=real`) and exercise the full WS API.
