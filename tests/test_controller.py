@@ -142,19 +142,21 @@ async def test_deadband_suppresses_redundant_moves(ctrl) -> None:
     c, plc, tcs_sim = ctrl
     await _wait_until(lambda: c.snapshot().tcs is not None)
     await c.set_control_mode(ControlMode.AUTO)
+    # Converge tightly — well below the 0.5° deadband — so a sub-deadband nudge
+    # cannot push the delta over the threshold.
     await _wait_until(
         lambda: (
             c.snapshot().plc is not None
             and c.snapshot().targets is not None
-            and abs(c.snapshot().plc.axis_a.position_deg - c.snapshot().targets.a) <= 0.5
+            and c.snapshot().plc.axis_a.done is True
+            and abs(c.snapshot().plc.axis_a.position_deg - c.snapshot().targets.a) <= 0.05
         ),
         timeout=4.0,
     )
-    # Now nudge the TCS rotator by 0.1° — well inside the 0.5° deadband.
+    # Nudge by 0.1° — that's a 0.1° target shift, still under the 0.5° deadband.
     cur = c.snapshot().tcs.rotator_deg
     tcs_sim.set_state(elevation_deg=c.snapshot().tcs.elevation_deg, rotator_deg=cur + 0.1)
-    # Capture position, wait a few tracking cycles, verify it didn't move.
     pos_before = c.snapshot().plc.axis_a.position_deg
     await asyncio.sleep(0.2)
     pos_after = c.snapshot().plc.axis_a.position_deg
-    assert pos_before == pytest.approx(pos_after, abs=0.2)
+    assert pos_before == pytest.approx(pos_after, abs=0.05)
