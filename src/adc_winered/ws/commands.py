@@ -3,6 +3,9 @@
 Each handler takes `(controller, args)` and returns a dict for the `ack.result`
 field on success, or raises `CommandError` for a failure that should land as
 `ack.ok=False`.
+
+Names and argument shapes follow the canonical APP_REGISTRY in
+`lco-instrument-web/diagnostic.js` — snake_case, lens uppercase, etc.
 """
 
 from __future__ import annotations
@@ -10,9 +13,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
+from .. import __version__
 from ..controller import ControlMode, Controller
 from ..plc import Axis, PlcUnreachable, Slide
-from .envelope import ErrorCode
+from .envelope import APP_NAME, PROTOCOL_VERSION, ErrorCode
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,19 +61,23 @@ def _require_bool(args: dict[str, Any], key: str) -> bool:
     return raw
 
 
+async def version(_c: Controller, _args: dict[str, Any]) -> dict[str, Any]:
+    return {"version": __version__, "protocol_version": PROTOCOL_VERSION, "app": APP_NAME}
+
+
 async def set_adc_insertion(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
-    position = _require_str(args, "position", ("in", "out"))
+    pos = _require_str(args, "pos", ("in", "out"))
     try:
-        await c.set_slide(Slide.A, deploy_in=(position == "in"))
+        await c.set_slide(Slide.A, deploy_in=(pos == "in"))
     except PlcUnreachable as exc:
         raise CommandError(ErrorCode.PLC_UNREACHABLE, str(exc)) from exc
     return {"requested": True}
 
 
 async def set_other_insertion(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
-    position = _require_str(args, "position", ("in", "out"))
+    pos = _require_str(args, "pos", ("in", "out"))
     try:
-        await c.set_slide(Slide.B, deploy_in=(position == "in"))
+        await c.set_slide(Slide.B, deploy_in=(pos == "in"))
     except PlcUnreachable as exc:
         raise CommandError(ErrorCode.PLC_UNREACHABLE, str(exc)) from exc
     return {"requested": True}
@@ -82,10 +90,10 @@ async def set_control_mode(c: Controller, args: dict[str, Any]) -> dict[str, Any
 
 
 async def move_lens(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
-    lens = _require_str(args, "lens", ("a", "b"))
+    lens = _require_str(args, "lens", ("A", "B"))
     angle = _require_float(args, "angle")
     try:
-        await c.move_axis_to(Axis.A if lens == "a" else Axis.B, angle)
+        await c.move_axis_to(Axis.A if lens == "A" else Axis.B, angle)
     except PlcUnreachable as exc:
         raise CommandError(ErrorCode.PLC_UNREACHABLE, str(exc)) from exc
     return {"requested": True}
@@ -102,11 +110,25 @@ async def trigger_manual_update(c: Controller, _args: dict[str, Any]) -> dict[st
     return {"requested": True}
 
 
+async def set_running(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
+    """v1: maps to the control-mode auto/off transition.
+
+    The legacy "running" flag is conceptually a master halt; for v1 the server
+    treats it as an alias of set_control_mode — no new state machine, same
+    observable behavior. Revisit when the bench reveals a behavioral gap.
+    """
+    running = _require_bool(args, "running")
+    await c.set_control_mode(ControlMode.AUTO if running else ControlMode.OFF)
+    return {"running": running}
+
+
 DISPATCH: dict[str, Handler] = {
-    "setADCInsertion": set_adc_insertion,
-    "setOtherInsertion": set_other_insertion,
-    "setControlMode": set_control_mode,
-    "moveLens": move_lens,
-    "setAutoUpdate": set_auto_update,
-    "triggerManualUpdate": trigger_manual_update,
+    "version": version,
+    "set_adc_insertion": set_adc_insertion,
+    "set_other_insertion": set_other_insertion,
+    "set_control_mode": set_control_mode,
+    "move_lens": move_lens,
+    "set_auto_update": set_auto_update,
+    "trigger_manual_update": trigger_manual_update,
+    "set_running": set_running,
 }

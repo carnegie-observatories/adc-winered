@@ -6,6 +6,8 @@ Authoritative protocol spec: `/Users/william/workspace/lco-ansible/docs/ws-proto
 
 `ws://<host>:52403`. No TLS, no auth (v1). Configure via `ADC_WS_HOST` / `ADC_WS_PORT`.
 
+The server announces itself as `app: "ADC"` in the `hello` frame — uppercase, matching the canonical `APP_REGISTRY` key in `lco-instrument-web/diagnostic.js`.
+
 ## Frame types
 
 Seven JSON envelopes; full schema in the spec. Server emits `hello`, `state`, `event`, `ack`. Client emits `subscribe`, `unsubscribe`, `cmd`.
@@ -45,14 +47,18 @@ The exact projector code is in [`src/adc_winered/ws/topics.py`](../src/adc_winer
 
 Implemented in [`src/adc_winered/ws/commands.py`](../src/adc_winered/ws/commands.py).
 
+Names and argument shapes follow the canonical client's APP_REGISTRY (snake_case throughout):
+
 | Command | Args | Effect |
 |---|---|---|
-| `setADCInsertion` | `{position: "in"|"out"}` | Drive Slide A |
-| `setOtherInsertion` | `{position: "in"|"out"}` | Drive Slide B |
-| `setControlMode` | `{mode: "auto"|"off"}` | Enter / leave tracking |
-| `moveLens` | `{lens: "a"|"b", angle: float}` | Manual axis move (bypasses tracking) |
-| `setAutoUpdate` | `{enabled: bool}` | Alias for `setControlMode` (UI naming) |
-| `triggerManualUpdate` | `{}` | One-shot recompute + dispatch |
+| `version` | `{}` | Returns `{version, protocol_version, app}` |
+| `set_adc_insertion` | `{pos: "in"\|"out"}` | Drive Slide A |
+| `set_other_insertion` | `{pos: "in"\|"out"}` | Drive Slide B |
+| `set_control_mode` | `{mode: "auto"\|"off"}` | Enter / leave tracking |
+| `move_lens` | `{lens: "A"\|"B", angle: float}` | Manual axis move (bypasses tracking) |
+| `set_auto_update` | `{enabled: bool}` | Alias of `set_control_mode` (UI naming) |
+| `trigger_manual_update` | `{}` | One-shot recompute + dispatch |
+| `set_running` | `{running: bool}` | Master halt; aliases `set_control_mode` for v1 |
 
 All commands return `{"requested": true}` immediately for long-running effects; observe completion via `state`/`event` frames. Unknown commands ack with `invalid_argument`.
 

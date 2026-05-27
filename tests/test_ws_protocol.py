@@ -60,7 +60,7 @@ async def test_hello_on_connect(stack) -> None:
     try:
         msg = json.loads(await ws.recv())
         assert msg["type"] == "hello"
-        assert msg["app"] == "adc"
+        assert msg["app"] == "ADC"  # matches lco-instrument-web APP_REGISTRY key
         assert msg["protocol_version"] == 1
         assert set(msg["topics"]) == {"status", "lens", "telescope", "logs"}
     finally:
@@ -86,7 +86,7 @@ async def test_cmd_returns_ack_ok(stack) -> None:
     try:
         await ws.recv()  # hello
         await ws.send(json.dumps({
-            "type": "cmd", "id": "c1", "name": "setControlMode", "args": {"mode": "auto"}
+            "type": "cmd", "id": "c1", "name": "set_control_mode", "args": {"mode": "auto"}
         }))
         ack = await _recv_until(ws, lambda p: p.get("type") == "ack")
         assert ack == {"type": "ack", "id": "c1", "ok": True, "result": {"mode": "auto"}}
@@ -113,7 +113,7 @@ async def test_cmd_missing_argument_returns_ack_error(stack) -> None:
     ws = await _connect(server)
     try:
         await ws.recv()
-        await ws.send(json.dumps({"type": "cmd", "id": "c3", "name": "moveLens", "args": {"lens": "a"}}))
+        await ws.send(json.dumps({"type": "cmd", "id": "c3", "name": "move_lens", "args": {"lens": "A"}}))
         ack = await _recv_until(ws, lambda p: p.get("type") == "ack")
         assert ack["ok"] is False
         assert ack["error"]["code"] == "missing_argument"
@@ -161,6 +161,36 @@ async def test_status_topic_reflects_control_mode(stack) -> None:
                        and p.get("data", {}).get("control") == "auto",
         )
         assert updated["data"]["update"] is True
+    finally:
+        await ws.close()
+
+
+async def test_version_command(stack) -> None:
+    server, _, _ = stack
+    ws = await _connect(server)
+    try:
+        await ws.recv()  # hello
+        await ws.send(json.dumps({"type": "cmd", "id": "v1", "name": "version", "args": {}}))
+        ack = await _recv_until(ws, lambda p: p.get("type") == "ack")
+        assert ack["ok"] is True
+        assert ack["result"]["app"] == "ADC"
+        assert ack["result"]["protocol_version"] == 1
+        assert isinstance(ack["result"]["version"], str)
+    finally:
+        await ws.close()
+
+
+async def test_set_running_aliases_control_mode(stack) -> None:
+    server, ctrl, _ = stack
+    ws = await _connect(server)
+    try:
+        await ws.recv()  # hello
+        await ws.send(json.dumps({"type": "cmd", "id": "r1", "name": "set_running", "args": {"running": True}}))
+        ack = await _recv_until(ws, lambda p: p.get("type") == "ack")
+        assert ack["ok"] is True
+        # Allow a tick for the controller to apply.
+        await asyncio.sleep(0.05)
+        assert ctrl.snapshot().mode.value == "auto"
     finally:
         await ws.close()
 

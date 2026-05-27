@@ -15,7 +15,9 @@ from dataclasses import dataclass
 from typing import Any
 
 PROTOCOL_VERSION = 1
-APP_NAME = "adc"
+# App name is uppercase to match the canonical client's APP_REGISTRY keys
+# (lco-instrument-web/diagnostic.js — keyed "ADC", "DCU", etc.).
+APP_NAME = "ADC"
 KNOWN_TOPICS = ("status", "lens", "telescope", "logs")
 
 

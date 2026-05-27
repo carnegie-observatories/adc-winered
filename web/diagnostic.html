@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>adc-winered diagnostic</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+         margin: 0; padding: 16px; max-width: 1100px; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  h2 { font-size: 14px; margin: 16px 0 6px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; }
+  .col { flex: 1 1 320px; min-width: 320px; }
+  .panel { border: 1px solid #ccc4; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+  .topic { font-family: ui-monospace, monospace; white-space: pre-wrap; font-size: 12px;
+           background: #8881; padding: 8px; border-radius: 4px; min-height: 1.4em; }
+  .conn { padding: 4px 10px; border-radius: 4px; font-size: 12px; display: inline-block; }
+  .conn.ok { background: #1a73; color: white; }
+  .conn.bad { background: #d33; color: white; }
+  .conn.muted { background: #8884; }
+  .cmd { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+  .cmd label { font-size: 12px; color: #888; }
+  .cmd input, .cmd select, .cmd button { font-family: inherit; font-size: 12px; padding: 4px 8px; }
+  .cmd button { background: #2563eb; color: white; border: 0; border-radius: 4px; cursor: pointer; min-width: 8em; }
+  .cmd button:hover { background: #1d4ed8; }
+  .cmd .name { font-weight: 600; min-width: 12em; }
+  .log { font-family: ui-monospace, monospace; font-size: 11px; height: 260px; overflow: auto;
+         background: #1118; color: #cfc; padding: 8px; border-radius: 4px; }
+  .log .send { color: #fc8; }
+  .log .recv { color: #ace; }
+  .log .err { color: #f88; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .controls input { font-family: inherit; font-size: 13px; padding: 4px 8px; }
+</style>
+</head>
+<body>
+
+<h1>adc-winered diagnostic</h1>
+
+<div class="controls">
+  <label>ws://</label>
+  <input id="host" value="localhost" size="14">
+  <label>:</label>
+  <input id="port" value="52403" size="5">
+  <button id="connect">Connect</button>
+  <span id="conn-state" class="conn muted">disconnected</span>
+  <span id="hello-info" style="font-size:12px;color:#888"></span>
+</div>
+
+<div class="row">
+
+  <div class="col">
+    <div class="panel">
+      <h2>status</h2><div id="topic-status" class="topic">—</div>
+      <h2>lens</h2><div id="topic-lens" class="topic">—</div>
+      <h2>telescope</h2><div id="topic-telescope" class="topic">—</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel">
+      <h2>commands</h2>
+      <div id="commands"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="panel">
+  <h2>log</h2>
+  <div id="log" class="log"></div>
+</div>
+
+<script type="module">
+// Mirrors lco-instrument-web/diagnostic.js APP_REGISTRY entry for ADC.
+const COMMANDS = [
+  { name: "version" },
+  { name: "set_adc_insertion",     args: [{ name: "pos",     kind: "select", options: ["in", "out"] }] },
+  { name: "set_other_insertion",   args: [{ name: "pos",     kind: "select", options: ["in", "out"] }] },
+  { name: "set_control_mode",      args: [{ name: "mode",    kind: "select", options: ["auto", "off"] }] },
+  { name: "set_auto_update",       args: [{ name: "enabled", kind: "bool" }] },
+  { name: "trigger_manual_update" },
+  { name: "set_running",           args: [{ name: "running", kind: "bool" }] },
+  { name: "move_lens",             args: [{ name: "lens",    kind: "select", options: ["A", "B"] },
+                                          { name: "angle",   kind: "number", step: 0.1, default: 0 }] },
+];
+
+const $ = (id) => document.getElementById(id);
+const url = new URL(location.href);
+if (url.searchParams.get("host")) $("host").value = url.searchParams.get("host");
+if (url.searchParams.get("port")) $("port").value = url.searchParams.get("port");
+
+let ws = null;
+let cmdId = 1;
+
+function logLine(cls, text) {
+  const div = document.createElement("div");
+  div.className = cls;
+  div.textContent = `[${new Date().toISOString().slice(11, 19)}] ${text}`;
+  const log = $("log");
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setConn(text, cls) {
+  const el = $("conn-state");
+  el.className = `conn ${cls}`;
+  el.textContent = text;
+}
+
+function send(obj) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    logLine("err", "not connected");
+    return;
+  }
+  const text = JSON.stringify(obj);
+  ws.send(text);
+  logLine("send", "→ " + text);
+}
+
+function renderTopic(topic, data) {
+  const el = $(`topic-${topic}`);
+  if (!el) return;
+  el.textContent = JSON.stringify(data, null, 2);
+}
+
+function buildCommandRow(cmd) {
+  const row = document.createElement("div");
+  row.className = "cmd";
+  const nameEl = document.createElement("span");
+  nameEl.className = "name";
+  nameEl.textContent = cmd.name;
+  row.appendChild(nameEl);
+
+  const inputs = {};
+  for (const arg of (cmd.args || [])) {
+    const label = document.createElement("label");
+    label.textContent = arg.name;
+    row.appendChild(label);
+
+    let input;
+    if (arg.kind === "select") {
+      input = document.createElement("select");
+      for (const opt of arg.options) {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        input.appendChild(o);
+      }
+    } else if (arg.kind === "bool") {
+      input = document.createElement("select");
+      for (const opt of ["true", "false"]) {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        input.appendChild(o);
+      }
+    } else if (arg.kind === "number") {
+      input = document.createElement("input");
+      input.type = "number";
+      if (arg.step != null) input.step = arg.step;
+      if (arg.default != null) input.value = arg.default;
+      input.size = 6;
+    } else {
+      input = document.createElement("input");
+      input.type = "text";
+      input.size = 8;
+    }
+    inputs[arg.name] = { el: input, kind: arg.kind };
+    row.appendChild(input);
+  }
+
+  const btn = document.createElement("button");
+  btn.textContent = "Send";
+  btn.onclick = () => {
+    const args = {};
+    for (const [name, { el, kind }] of Object.entries(inputs)) {
+      if (kind === "number") args[name] = parseFloat(el.value);
+      else if (kind === "bool") args[name] = el.value === "true";
+      else args[name] = el.value;
+    }
+    const id = "c" + (cmdId++);
+    send({ type: "cmd", id, name: cmd.name, args });
+  };
+  row.appendChild(btn);
+  return row;
+}
+
+const cmdRoot = $("commands");
+for (const c of COMMANDS) cmdRoot.appendChild(buildCommandRow(c));
+
+function connect() {
+  if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+  const host = $("host").value.trim();
+  const port = $("port").value.trim();
+  setConn(`connecting…`, "muted");
+  ws = new WebSocket(`ws://${host}:${port}/`);
+  ws.onopen = () => {
+    setConn(`connected`, "ok");
+    // Subscribe to everything except logs (logs panel TBD).
+    send({ type: "subscribe", topics: ["status", "lens", "telescope"] });
+  };
+  ws.onclose = (ev) => setConn(`closed (${ev.code})`, "bad");
+  ws.onerror = () => setConn(`error`, "bad");
+  ws.onmessage = (ev) => {
+    logLine("recv", "← " + ev.data);
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.type === "hello") {
+      $("hello-info").textContent = `app=${msg.app} · protocol v${msg.protocol_version} · topics=[${(msg.topics||[]).join(",")}]`;
+    } else if (msg.type === "state" && msg.topic) {
+      renderTopic(msg.topic, msg.data);
+    }
+  };
+}
+
+$("connect").onclick = connect;
+</script>
+
+</body>
+</html>

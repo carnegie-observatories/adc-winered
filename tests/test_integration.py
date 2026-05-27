@@ -44,7 +44,7 @@ async def test_end_to_end_tracking_via_ws() -> None:
             await ws.send(json.dumps({"type": "subscribe", "topics": ["status", "lens", "telescope"]}))
 
             # 3. Enable auto control.
-            await ws.send(json.dumps({"type": "cmd", "id": "c1", "name": "setControlMode", "args": {"mode": "auto"}}))
+            await ws.send(json.dumps({"type": "cmd", "id": "c1", "name": "set_control_mode", "args": {"mode": "auto"}}))
 
             # 4. Wait for the lens topic to report both axes done at the IB targets.
             #    Drain frames; we don't care about ordering.
@@ -76,7 +76,7 @@ async def test_end_to_end_tracking_via_ws() -> None:
                         converged["b"] = True
 
             # 5. Insert the ADC slide.
-            await ws.send(json.dumps({"type": "cmd", "id": "c2", "name": "setADCInsertion", "args": {"position": "in"}}))
+            await ws.send(json.dumps({"type": "cmd", "id": "c2", "name": "set_adc_insertion", "args": {"pos": "in"}}))
             slide_in = False
             deadline = asyncio.get_event_loop().time() + 2.0
             while not slide_in:
@@ -88,7 +88,7 @@ async def test_end_to_end_tracking_via_ws() -> None:
                         slide_in = True
 
             # 6. Disable auto and confirm status flips.
-            await ws.send(json.dumps({"type": "cmd", "id": "c3", "name": "setControlMode", "args": {"mode": "off"}}))
+            await ws.send(json.dumps({"type": "cmd", "id": "c3", "name": "set_control_mode", "args": {"mode": "off"}}))
             saw_off = False
             deadline = asyncio.get_event_loop().time() + 2.0
             while not saw_off:
