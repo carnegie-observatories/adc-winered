@@ -31,6 +31,7 @@ class _AxisSimState:
     done: bool = True
     error: bool = False
     error_id: int = 0
+    homed: bool = False
 
 
 @dataclass(slots=True)
@@ -109,6 +110,7 @@ class PlcSim:
         state.done = True
         state.error = False
         state.error_id = 0
+        state.homed = True
 
     async def reset_axis(self, axis: Axis) -> None:
         state = self._state_for(axis)
@@ -140,6 +142,7 @@ class PlcSim:
             done=s.done,
             error=s.error,
             error_id=s.error_id,
+            ready=s.homed and not s.error,
         )
 
     def _advance(self) -> None:

@@ -2,13 +2,13 @@
 // integrates position toward target at rVelocity. No real motion is asserted.
 FUNCTION_BLOCK FB_RotatorSim
 VAR_INPUT
-    bGo            : BOOL;
-    rTarget        : LREAL;
-    rVelocity      : LREAL;
-    bStop          : BOOL;
-    bHome          : BOOL;
-    bReset         : BOOL;
-    rCycleSeconds  : LREAL;   // task cycle in seconds (e.g. 0.010)
+    bGo           : BOOL;
+    rTarget       : LREAL;
+    rVelocity     : LREAL;
+    bStop         : BOOL;
+    bHome         : BOOL;
+    bReset        : BOOL;
+    rCycleSeconds : LREAL;   // task cycle in seconds (e.g. 0.010)
 END_VAR
 VAR_OUTPUT
     rPosition : LREAL;
@@ -16,6 +16,7 @@ VAR_OUTPUT
     bDone     : BOOL;
     bError    : BOOL;
     nErrorId  : UDINT;
+    bReady    : BOOL;       // homed AND not in error (sim mirrors FB_Rotator)
 END_VAR
 VAR
     rActiveTarget : LREAL;
@@ -25,6 +26,7 @@ VAR
     rfStop        : R_TRIG;
     rfHome        : R_TRIG;
     rfReset       : R_TRIG;
+    bSimHomed     : BOOL := FALSE;   // latched on first bHome rising edge
 END_VAR
 
 rfGo(CLK := bGo);
@@ -38,11 +40,16 @@ IF rfReset.Q THEN
 END_IF
 
 IF rfHome.Q THEN
+    // Home is the absolute zero in sim. The real axis uses the NC Reference
+    // Position parameter set in System Manager — bench-time configuration.
     rPosition := 0.0;
     rActiveTarget := 0.0;
     bBusy := FALSE;
     bDone := TRUE;
+    bSimHomed := TRUE;
 END_IF
+
+bReady := bSimHomed AND NOT bError;
 
 IF rfStop.Q THEN
     rActiveTarget := rPosition;

@@ -38,6 +38,7 @@ _AXIS_SYMBOLS = {
         "done": "GVL_State.bAxisA_Done",
         "error": "GVL_State.bAxisA_Error",
         "error_id": "GVL_State.nAxisA_ErrorId",
+        "ready": "GVL_State.bAxisA_Ready",
         "target": "GVL_Cmd.rAxisA_Target",
         "go": "GVL_Cmd.bAxisA_Go",
         "stop": "GVL_Cmd.bAxisA_Stop",
@@ -50,6 +51,7 @@ _AXIS_SYMBOLS = {
         "done": "GVL_State.bAxisB_Done",
         "error": "GVL_State.bAxisB_Error",
         "error_id": "GVL_State.nAxisB_ErrorId",
+        "ready": "GVL_State.bAxisB_Ready",
         "target": "GVL_Cmd.rAxisB_Target",
         "go": "GVL_Cmd.bAxisB_Go",
         "stop": "GVL_Cmd.bAxisB_Stop",
@@ -99,9 +101,9 @@ class PlcClient:
         def _read_all() -> dict[str, Any]:
             return {
                 **{f"a_{k}": plc.read_by_name(v) for k, v in _AXIS_SYMBOLS[Axis.A].items()
-                   if k in ("position", "busy", "done", "error", "error_id")},
+                   if k in ("position", "busy", "done", "error", "error_id", "ready")},
                 **{f"b_{k}": plc.read_by_name(v) for k, v in _AXIS_SYMBOLS[Axis.B].items()
-                   if k in ("position", "busy", "done", "error", "error_id")},
+                   if k in ("position", "busy", "done", "error", "error_id", "ready")},
                 "slide_a": plc.read_by_name(_SLIDE_SYMBOLS[Slide.A]["state"]),
                 "slide_b": plc.read_by_name(_SLIDE_SYMBOLS[Slide.B]["state"]),
                 "heartbeat": plc.read_by_name(_HEARTBEAT),
@@ -119,6 +121,7 @@ class PlcClient:
                 done=bool(vals["a_done"]),
                 error=bool(vals["a_error"]),
                 error_id=int(vals["a_error_id"]),
+                ready=bool(vals["a_ready"]),
             ),
             axis_b=AxisStatus(
                 position_deg=float(vals["b_position"]),
@@ -126,6 +129,7 @@ class PlcClient:
                 done=bool(vals["b_done"]),
                 error=bool(vals["b_error"]),
                 error_id=int(vals["b_error_id"]),
+                ready=bool(vals["b_ready"]),
             ),
             slide_a=_STATE_BY_INT.get(int(vals["slide_a"]), SlideState.ERROR),
             slide_b=_STATE_BY_INT.get(int(vals["slide_b"]), SlideState.ERROR),

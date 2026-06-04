@@ -2,7 +2,7 @@
 //
 // Axis_A_ref / Axis_B_ref are linked to the NC axes via the System Manager:
 // MOTION → NC-Task → Axis A/B → right-click → "Change Link" → bind to these
-// AXIS_REF instances. See SYSTEM_MANAGER.md step 2.
+// AXIS_REF instances. See docs/bring-up.md § 3.
 
 PROGRAM MAIN
 VAR

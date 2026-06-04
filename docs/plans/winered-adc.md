@@ -249,6 +249,29 @@ Per `feedback_commit_plan_before_execution.md` and `feedback_per_phase_commits.m
 
 After Phase 8, the bench/instrument steps in Verification become applicable. After Phase 9, both UI paths (canonical client + standalone) work without further server changes.
 
+## Open follow-ups
+
+### Persistent / UPS-backed configuration on the CX9240
+
+The CX9240 has an integrated UPS that can write retained data to internal flash on power loss — see the CX9240 docs at
+[infosys.beckhoff.com/.../251634305117360010379.html](https://infosys.beckhoff.com/english.php?content=../content/1033/cx9240/251634305117360010379.html&id=7329868021284717904).
+TwinCAT exposes this via `PERSISTENT` / `RETAIN` variable declarations.
+
+We don't use it yet, but several state items would benefit from surviving power cycles:
+
+- **Axis calibration / encoder home offset** — incremental encoders lose absolute reference on power-off; persisting the last known calibrated position plus a per-revolution Z-pulse fingerprint would let the controller skip rehoming on subsequent boots.
+- **Site/instrument tunables in `GVL_Cfg`** — if `bSimulate`, velocity, accel, decel, deadband, etc., get tuned at the bench, they should not revert to source defaults on the next deploy.
+- **Slide last-commanded state** — so a power-cycle mid-tracking doesn't unexpectedly retract a deployed slide on the next boot.
+
+Capture is a follow-up phase after the basic stack is verified on-instrument. Sketch:
+
+1. Convert eligible `GVL_Cfg` variables to `VAR_GLOBAL PERSISTENT RETAIN`.
+2. Add a `VAR_PERSISTENT` block in `GVL_State` (or a dedicated `GVL_Persist`) for axis calibration and slide state.
+3. Configure the CX9240 UPS via TwinCAT System Manager so the values are written to flash on supply loss.
+4. On boot, the PLC reads the persisted values and skips homing if the calibration fingerprint matches the encoder's current Z-pulse position.
+
+Not in scope for Phases 0–9 — added here so it isn't lost when the bring-up moves on.
+
 ## Verification
 
 End-to-end, exercised in CI and locally:

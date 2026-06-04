@@ -43,6 +43,7 @@ IF GVL_Cfg.bSimulate THEN
     GVL_State.bAxisA_Done     := fbRotatorSimA.bDone;
     GVL_State.bAxisA_Error    := fbRotatorSimA.bError;
     GVL_State.nAxisA_ErrorId  := fbRotatorSimA.nErrorId;
+    GVL_State.bAxisA_Ready    := fbRotatorSimA.bReady;
 ELSE
     fbRotatorA(
         Axis := AxisA,
@@ -61,6 +62,7 @@ ELSE
     GVL_State.bAxisA_Done     := fbRotatorA.bDone;
     GVL_State.bAxisA_Error    := fbRotatorA.bError;
     GVL_State.nAxisA_ErrorId  := fbRotatorA.nErrorId;
+    GVL_State.bAxisA_Ready    := fbRotatorA.bReady;
 END_IF
 
 // The PLC clears the Go bit after one cycle so the next rising edge can fire.
@@ -85,6 +87,7 @@ IF GVL_Cfg.bSimulate THEN
     GVL_State.bAxisB_Done     := fbRotatorSimB.bDone;
     GVL_State.bAxisB_Error    := fbRotatorSimB.bError;
     GVL_State.nAxisB_ErrorId  := fbRotatorSimB.nErrorId;
+    GVL_State.bAxisB_Ready    := fbRotatorSimB.bReady;
 ELSE
     fbRotatorB(
         Axis := AxisB,
@@ -103,6 +106,7 @@ ELSE
     GVL_State.bAxisB_Done     := fbRotatorB.bDone;
     GVL_State.bAxisB_Error    := fbRotatorB.bError;
     GVL_State.nAxisB_ErrorId  := fbRotatorB.nErrorId;
+    GVL_State.bAxisB_Ready    := fbRotatorB.bReady;
 END_IF
 
 GVL_Cmd.bAxisB_Go    := FALSE;

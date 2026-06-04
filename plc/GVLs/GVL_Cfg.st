@@ -1,4 +1,8 @@
 // Tunables. Persisted in the PLC project, not visible over ADS.
+//
+// Homing velocity and home position are NOT here — they're NC axis parameters
+// set in System Manager (Reference Velocity Fast/Slow, Home Position /
+// Calibration Value) at bench bring-up. See docs/bring-up.md § 4.
 {attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT
     // Default velocity for rotator slews (deg/s). Override per axis if needed.

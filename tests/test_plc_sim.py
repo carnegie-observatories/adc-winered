@@ -89,6 +89,22 @@ async def test_home_snaps_to_zero(clock: FakeClock, sim: PlcSim) -> None:
     assert snap.axis_a.done is True
 
 
+async def test_ready_is_false_until_homed(sim: PlcSim) -> None:
+    snap = await sim.read()
+    assert snap.axis_a.ready is False
+    assert snap.axis_b.ready is False
+
+    await sim.home_axis(Axis.A)
+    snap = await sim.read()
+    assert snap.axis_a.ready is True
+    # Axis B hasn't been homed yet — still not ready.
+    assert snap.axis_b.ready is False
+
+    await sim.home_axis(Axis.B)
+    snap = await sim.read()
+    assert snap.axis_b.ready is True
+
+
 async def test_slide_transitions_through_moving(clock: FakeClock, sim: PlcSim) -> None:
     await sim.set_slide(Slide.A, deploy_in=True)
     snap = await sim.read()

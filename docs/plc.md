@@ -32,10 +32,12 @@ The client expects exactly these symbols on the PLC. They are declared in `plc/G
 ```
 rAxisA_Position : LREAL          // degrees
 bAxisA_Busy / bAxisA_Done / bAxisA_Error : BOOL
-nAxisA_ErrorId : DINT
+nAxisA_ErrorId : UDINT           // matches MC_*.ErrorID
+bAxisA_Ready  : BOOL             // homed AND not in error
 rAxisB_Position : LREAL
 bAxisB_Busy / bAxisB_Done / bAxisB_Error : BOOL
-nAxisB_ErrorId : DINT
+nAxisB_ErrorId : UDINT
+bAxisB_Ready  : BOOL
 eSlideA : E_SlideState           // 0=OUT, 1=IN, 2=MOVING, 3=ERROR
 eSlideB : E_SlideState
 bHeartbeat : BOOL                // toggled by the PLC each cycle
@@ -56,7 +58,7 @@ If you change a symbol name, change both the `.st` declaration and the `_AXIS_SY
 
 ## TwinCAT project layout
 
-All ST source lives in [`plc/`](../plc/). The System Manager configuration (EtherCAT topology, NC axis parameters, `TcLinkTo` link paths) is established once in XAE per [`plc/SYSTEM_MANAGER.md`](../plc/SYSTEM_MANAGER.md).
+All ST source lives in [`plc/`](../plc/). The System Manager configuration (EtherCAT topology, NC axis parameters, `TcLinkTo` link paths) is established once in XAE per [`docs/bring-up.md`](bring-up.md).
 
 ```
 plc/
@@ -91,7 +93,7 @@ When you change one sim, change the other. The contract is "same observable stat
 ## Bring-up checklist
 
 1. Import the `.st` files into a TwinCAT 3 XAE solution.
-2. Follow [`plc/SYSTEM_MANAGER.md`](../plc/SYSTEM_MANAGER.md) for EtherCAT scan, NC axis setup, and link wiring.
+2. Follow [`docs/bring-up.md`](bring-up.md) for EtherCAT scan, NC axis setup, and link wiring.
 3. Set `GVL_Cfg.bSimulate := TRUE` for a first dry run; activate the config and confirm `GVL_State.bHeartbeat` toggles.
 4. Set `bSimulate := FALSE`, deploy each slide individually, watch limit-switch transitions.
 5. Run an `MC_Home` on each axis to find the encoder Z-pulse and set the home offset.

@@ -37,6 +37,10 @@ class AxisStatus:
     done: bool
     error: bool
     error_id: int
+    # True when the axis has been successfully homed and is not in error.
+    # Callers needing absolute position (e.g. the tracking loop) should refuse
+    # to dispatch a move when `ready` is False.
+    ready: bool = False
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,14 +8,16 @@ VAR_GLOBAL
     bAxisA_Busy     : BOOL;
     bAxisA_Done     : BOOL;
     bAxisA_Error    : BOOL;
-    nAxisA_ErrorId  : DINT;
+    nAxisA_ErrorId  : UDINT;  // Matches MC_*.ErrorID (Tc2_MC2)
+    bAxisA_Ready    : BOOL;   // Homed AND not in error — see FB_Rotator.bReady
 
     // Rotator B
     rAxisB_Position : LREAL;
     bAxisB_Busy     : BOOL;
     bAxisB_Done     : BOOL;
     bAxisB_Error    : BOOL;
-    nAxisB_ErrorId  : DINT;
+    nAxisB_ErrorId  : UDINT;
+    bAxisB_Ready    : BOOL;
 
     // Slides
     eSlideA : E_SlideState;
