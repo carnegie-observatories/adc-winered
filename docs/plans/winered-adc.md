@@ -272,6 +272,62 @@ Capture is a follow-up phase after the basic stack is verified on-instrument. Sk
 
 Not in scope for Phases 0–9 — added here so it isn't lost when the bring-up moves on.
 
+### Collapse `FB_RotatorSim` into NC simulated axes
+
+Phase 8 committed to parallel `FB_Rotator` / `FB_RotatorSim` and
+`FB_Slide` / `FB_SlideSim` FB pairs, with the drift-avoidance argument
+that "both expose the same outputs through identical FB interfaces."
+That works at the boundary, but it doesn't exercise `FB_Rotator`'s
+internals (MC2 sequencing, homing FSM, NC config) in sim — `FB_RotatorSim`
+shortcuts them with a constant-velocity integrator and a one-shot
+`rPosition := 0` on `bHome`.
+
+An alternative architecture: configure **two additional NC axes**
+(Axis 3 and Axis 4) as **Simulation Encoder + Simulation Drive** in
+TwinCAT NC. The trajectory generator's setpoint integrates into
+`ActPos` directly; no EtherCAT process data exchanged. `FB_AdcController`
+keeps the `bSimulate` branch but both branches call `FB_Rotator` —
+the only difference is which `AXIS_REF` is wired in (real
+`Axis_A_ref` / `Axis_B_ref` or sim `Axis_3_ref` / `Axis_4_ref`). One
+rotator FB type instead of two.
+
+**Pros:**
+- One `FB_Rotator` type for sim and prod.
+- Exercises real `Tc2_MC2` paths in sim — `MC_Move*`, `MC_Home` with
+  `bCalibrationCam`, lag monitoring, S-curve trajectories all behave
+  the way they do in prod.
+- NC config bugs (Scaling Factor, Modulo, Reference Mode) trip in sim
+  too.
+
+**Cons:**
+- Doesn't help the slides. `FB_Slide` / `FB_SlideSim` still exist —
+  slides are pneumatic actuators with digital limit switches, no NC
+  analogue. Net win: one FB type, not two.
+- NC config drift moves but doesn't vanish. Axis 1/3 (rotator A
+  real/sim) need identical Scaling, Modulo, Reference Velocity, Lag
+  Monitoring etc. in the `.tsproj` XML; a sim that drifts from prod
+  lies the same way a sim FB does.
+- Homing-in-sim becomes awkward. Sim axes don't have an EL7342 to fire
+  `0x7000:02`; either skip homing in sim (losing exercise of the part
+  with the deepest config) or rig a sim-specific `Reference Mode`
+  (which diverges from prod). The current `FB_RotatorSim` cheats
+  cleanly with `rPosition := 0` on `bHome`.
+- Adds two NC axes to maintain in the System Manager config.
+- Doesn't change Python `plc_sim.py` (host-only sim, no TwinCAT
+  involved) — that's where 40 of the 41 tests run.
+
+**When to revisit:**
+- A second instrument adopts the same Beckhoff + RM08ID + EL7342 stack
+  and a shared `FB_Rotator` would pay off.
+- `FB_Rotator`'s homing or motion FSM gets substantially rewritten.
+- `FB_*Sim` variants start collecting drift bugs the identical-interface
+  contract doesn't catch ("the sim missed this because it doesn't
+  actually run the FSM").
+
+Not pursued now because `FB_Rotator` is settling down (Phase 10's
+homing work is done), the slide sim has to stay regardless, and the
+Python-side `plc_sim.py` is doing the heavy CI lifting.
+
 ## Verification
 
 End-to-end, exercised in CI and locally:
