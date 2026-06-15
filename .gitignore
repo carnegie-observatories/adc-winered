@@ -20,3 +20,12 @@ htmlcov/
 
 # uv
 # (uv.lock IS committed)
+
+# TwinCAT XAE — build artefacts and user-local state
+_Boot/
+_CompileInfo/
+.vs/
+*.tsproj.bak
+*.compileinfo
+*.vsidx
+TrialLicense.tclrs

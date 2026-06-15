@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_Cfg" Id="{980ff7b9-853d-4dad-a492-039d6c37a913}">
+    <Declaration><![CDATA[// Tunables. Persisted in the PLC project, not visible over ADS.
+//
+// Homing velocity and home position are NOT here — they're NC axis parameters
+// set in System Manager (Reference Velocity Fast/Slow, Home Position /
+// Calibration Value) at bench bring-up. See docs/bring-up.md § 4.
+{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+    // Default velocity for rotator slews (deg/s). Override per axis if needed.
+    rRotatorVelocity  : LREAL := 30.0;
+    // Default acceleration / deceleration (deg/s²). Tc2_MC2 takes the same units
+    // as the encoder scaling (deg here).
+    rRotatorAccel     : LREAL := 60.0;
+    rRotatorDecel     : LREAL := 60.0;
+    // Jerk (deg/s³). Set to zero to use the NC axis default.
+    rRotatorJerk      : LREAL := 0.0;
+    // Slide settle timeout — if MOVING persists past this, transition to ERROR.
+    tSlideStuckTime   : TIME  := T#5S;
+    // Sim-only: how long the simulated slide reports MOVING before settling.
+    tSimSlideSettle   : TIME  := T#500MS;
+END_VAR
+
+VAR_GLOBAL
+    // Sim toggle. TRUE -> FB_AdcController calls FB_*Sim instead of the real FBs.
+    // Persist via XAE → "Initialize via retain" or set in the boot project.
+    bSimulate : BOOL := FALSE;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

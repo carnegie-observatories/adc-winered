@@ -191,7 +191,7 @@ Device 1 (EtherCAT)
 ```
 
 Module numbering may differ on your bench. Whatever it is, update the
-`TcLinkTo` paths in `GVLs/GVL_IO.st` to match.
+`TcLinkTo` paths in `plc/adc/adc/GVLs/GVL_IO.TcGVL` to match.
 
 ## 2. EL7342 SDO configuration (per-channel motor + encoder)
 
@@ -325,7 +325,7 @@ Manual jog velocities for bench testing live on the axis's **Functions**
 subpage (not Parameter); set them when you actually need to jog from
 XAE — `30 °/s` fast, `5 °/s` slow are sensible starting points.
 
-The PLC-side defaults in [`plc/GVLs/GVL_Cfg.st`](../plc/GVLs/GVL_Cfg.st)
+The PLC-side defaults in [`plc/adc/adc/GVLs/GVL_Cfg.TcGVL`](../plc/adc/adc/GVLs/GVL_Cfg.TcGVL)
 request `rRotatorVelocity = 30 °/s` and
 `rRotatorAccel = rRotatorDecel = 60 °/s²` — these are what `FB_Rotator`
 passes to `MC_MoveAbsolute`. They're well under the NC ceilings above,
@@ -351,7 +351,7 @@ right-click → Link To.
 
 ### Link the PLC's `AXIS_REF` instances to the NC axes (manual)
 
-The PLC's `MAIN.st` declares `Axis_A_ref : AXIS_REF` and
+The PLC's `MAIN` POU declares `Axis_A_ref : AXIS_REF` and
 `Axis_B_ref : AXIS_REF`. These must be linked **by hand** in System
 Manager to the NC axes you just created — the PLC project carries the
 ST source but can't know which NC axis to bind to. Without these links
@@ -392,7 +392,7 @@ That means the Z pulse serves **two roles** in NC's two-phase homing:
   and captures the encoder count on the **rising** edge of I1 — the
   leading edge of the Z pulse. Active-high, `(pos. edge)`.
 
-[`plc/POUs/FB_Rotator.st`](../plc/POUs/FB_Rotator.st) drives
+[`plc/adc/adc/POUs/FB_Rotator.TcPOU`](../plc/adc/adc/POUs/FB_Rotator.TcPOU) drives
 `bCalibrationCam` from `(Axis.NcToPlc.HomingState < 4)`. `MC_Home`
 auto-links this input to `Axis.PlcToNc.ControlDWord.7`, which NC reads
 as the cam status — no manual control-word writes are needed.
@@ -450,14 +450,14 @@ After homing completes:
 
 ## 5. Linking GVL_IO
 
-Each variable in [`plc/GVLs/GVL_IO.st`](../plc/GVLs/GVL_IO.st) carries a
-`TcLinkTo` attribute that points at an EtherCAT input/output channel.
-After importing the GVL into XAE, click "Reload All Mappings" to
-materialise the links. Verify in `I/O → Mappings → PLC` that every
-variable resolves.
+Each variable in [`plc/adc/adc/GVLs/GVL_IO.TcGVL`](../plc/adc/adc/GVLs/GVL_IO.TcGVL)
+carries a `TcLinkTo` attribute that points at an EtherCAT input/output
+channel and a `AT %I*` / `AT %Q*` address that puts it in the process
+image. In XAE click "Reload All Mappings" to materialise the links;
+verify in `I/O → Mappings → PLC` that every variable resolves.
 
 If the topology in [§ 1 EtherCAT master](#1-ethercat-master) differs,
-update the `TcLinkTo` strings in `GVL_IO.st` to match (XAE → right-click
+update the `TcLinkTo` strings in `GVL_IO.TcGVL` to match (XAE → right-click
 variable → Properties → look at "Path"); the Beckhoff online docs cover
 the attribute syntax in detail
 (https://infosys.beckhoff.com/content/1033/tc3_plc_intro/3107974923.html).

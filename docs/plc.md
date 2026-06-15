@@ -25,7 +25,7 @@ Both expose the same coroutines:
 
 ## ADS symbol layout
 
-The client expects exactly these symbols on the PLC. They are declared in `plc/GVLs/GVL_State.st` (read-only) and `plc/GVLs/GVL_Cmd.st` (read/write).
+The client expects exactly these symbols on the PLC. They are declared in `plc/adc/adc/GVLs/GVL_State.TcGVL` (read-only) and `plc/adc/adc/GVLs/GVL_Cmd.TcGVL` (read/write).
 
 ### `GVL_State` (read by Python)
 
@@ -54,27 +54,35 @@ bAxisA_Reset / bAxisB_Reset : BOOL
 bSlideA_Deploy / bSlideB_Deploy : BOOL   // level: TRUE = IN
 ```
 
-If you change a symbol name, change both the `.st` declaration and the `_AXIS_SYMBOLS` / `_SLIDE_SYMBOLS` tables in `plc_client.py`. Keep the two in lockstep.
+If you change a symbol name, change both the `.TcGVL` declaration and the `_AXIS_SYMBOLS` / `_SLIDE_SYMBOLS` tables in `plc_client.py`. Keep the two in lockstep.
 
 ## TwinCAT project layout
 
-All ST source lives in [`plc/`](../plc/). The System Manager configuration (EtherCAT topology, NC axis parameters, `TcLinkTo` link paths) is established once in XAE per [`docs/bring-up.md`](bring-up.md).
+The full TwinCAT XAE solution lives in [`plc/`](../plc/) — open
+[`plc/adc.sln`](../plc/adc.sln) in XAE. The System Manager configuration
+(EtherCAT topology, NC axis parameters, `TcLinkTo` link paths) is
+established once per [`docs/bring-up.md`](bring-up.md).
 
 ```
 plc/
-  Types/E_SlideState.st         # enum on the wire
-  GVLs/
-    GVL_IO.st                   # variables linked via TcLinkTo to EL2002/EL1084
-    GVL_State.st                # ADS read surface
-    GVL_Cmd.st                  # ADS write surface
-    GVL_Cfg.st                  # tunables + bSimulate
-  POUs/
-    FB_Slide.st                 # real solenoid driver + limit-switch decoder
-    FB_SlideSim.st              # software-only slide (settle timer)
-    FB_Rotator.st               # Tc2_MC2 wrapper around an NC axis
-    FB_RotatorSim.st            # software-only rotator (integrates position)
-    FB_AdcController.st         # composition root, dispatches by bSimulate
-    MAIN.st                     # entry; one FB_AdcController instance
+  adc.sln                            # Visual Studio solution
+  adc/
+    adc.tsproj                       # System Manager config
+    adc/
+      adc.plcproj                    # PLC project
+      DUTs/E_SlideState.TcDUT        # enum on the wire
+      GVLs/
+        GVL_IO.TcGVL                 # variables linked via TcLinkTo to EL2002/EL1084
+        GVL_State.TcGVL              # ADS read surface
+        GVL_Cmd.TcGVL                # ADS write surface
+        GVL_Cfg.TcGVL                # tunables + bSimulate
+      POUs/
+        FB_Slide.TcPOU               # real solenoid driver + limit-switch decoder
+        FB_SlideSim.TcPOU            # software-only slide (settle timer)
+        FB_Rotator.TcPOU             # Tc2_MC2 wrapper around an NC axis
+        FB_RotatorSim.TcPOU          # software-only rotator (integrates position)
+        FB_AdcController.TcPOU       # composition root, dispatches by bSimulate
+        MAIN.TcPOU                   # entry; one FB_AdcController instance
 ```
 
 `FB_AdcController` is the **only** place that reads/writes `GVL_State` and `GVL_Cmd`. Other POUs accept their inputs as `VAR_INPUT` and return outputs via `VAR_OUTPUT`. This keeps the ADS-visible state machine concentrated and reviewable.
@@ -92,7 +100,7 @@ When you change one sim, change the other. The contract is "same observable stat
 
 ## Bring-up checklist
 
-1. Import the `.st` files into a TwinCAT 3 XAE solution.
+1. Open [`plc/adc.sln`](../plc/adc.sln) in TwinCAT XAE.
 2. Follow [`docs/bring-up.md`](bring-up.md) for EtherCAT scan, NC axis setup, and link wiring.
 3. Set `GVL_Cfg.bSimulate := TRUE` for a first dry run; activate the config and confirm `GVL_State.bHeartbeat` toggles.
 4. Set `bSimulate := FALSE`, deploy each slide individually, watch limit-switch transitions.

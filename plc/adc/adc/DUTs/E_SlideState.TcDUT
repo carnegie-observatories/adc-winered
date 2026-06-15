@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_SlideState" Id="{bbf93ea1-6e2a-4304-83a7-82d06f1646ae}">
+    <Declaration><![CDATA[TYPE E_SlideState :
+(
+    eSlideOut    := 0,
+    eSlideIn     := 1,
+    eSlideMoving := 2,
+    eSlideError  := 3
+) INT;
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

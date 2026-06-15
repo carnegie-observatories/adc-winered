@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_Cmd" Id="{12742361-eebf-4f58-89d7-d74d52f68a60}">
+    <Declaration><![CDATA[// ADS-writable command surface. Python writes here; the PLC consumes and
+// clears the edge-triggered bits. The level-triggered slide bits stay set.
+{attribute 'qualified_only'}
+VAR_GLOBAL
+
+    // Rotator A
+    rAxisA_Target : LREAL;
+    bAxisA_Go     : BOOL;  // rising edge -> MC_MoveAbsolute; PLC clears after consume
+    bAxisA_Stop   : BOOL;  // rising edge -> MC_Stop
+    bAxisA_Home   : BOOL;  // rising edge -> MC_Home
+    bAxisA_Reset  : BOOL;  // rising edge -> MC_Reset
+
+    // Rotator B
+    rAxisB_Target : LREAL;
+    bAxisB_Go     : BOOL;
+    bAxisB_Stop   : BOOL;
+    bAxisB_Home   : BOOL;
+    bAxisB_Reset  : BOOL;
+
+    // Slides (level-triggered; TRUE = drive to IN)
+    bSlideA_Deploy : BOOL;
+    bSlideB_Deploy : BOOL;
+
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

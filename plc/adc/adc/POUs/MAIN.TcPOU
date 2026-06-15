@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="MAIN" Id="{94601d19-c861-48e1-965c-35fb5adfc979}" SpecialFunc="None">
+    <Declaration><![CDATA[// PLC entry point. Single FB_AdcController instance does all the work.
+//
+// Axis_A_ref / Axis_B_ref are linked to the NC axes via the System Manager:
+// MOTION → NC-Task → Axis A/B → right-click → "Change Link" → bind to these
+// AXIS_REF instances. See docs/bring-up.md § 3.
+
+PROGRAM MAIN
+VAR
+    fbAdc : FB_AdcController;
+
+    // Link these to the NC axes in System Manager.
+    Axis_A_ref : AXIS_REF;
+    Axis_B_ref : AXIS_REF;
+
+    // Task cycle in seconds. Keep in sync with the task period configured
+    // in XAE (default 10ms here).
+    rCycleSeconds : LREAL := 0.010;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[fbAdc(
+    AxisA := Axis_A_ref,
+    AxisB := Axis_B_ref,
+    rCycleSeconds := rCycleSeconds
+);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
