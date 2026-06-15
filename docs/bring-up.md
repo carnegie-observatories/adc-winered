@@ -317,8 +317,8 @@ no-load output speed at 12 V = 35 RPM = `210 °/s`; max-efficiency speed
 |---|---|---|
 | Reference Velocity | `210 °/s` | No-load output speed at 12 V — what 100 % drive output achieves; used for feed-forward |
 | Maximum Velocity | `162 °/s` | Max-efficiency point — keeps the motor in its safe operating band even at peak commanded speed |
-| Maximum Acceleration | `1000 °/s²` | Plenty of headroom above the PLC-side `GVL_Cfg.rRotatorAccel = 60 °/s²` request; prism inertia is small |
-| Maximum Deceleration | `1000 °/s²` | Same |
+| Maximum Acceleration | `2000 °/s²` | Plenty of headroom above the PLC-side `GVL_Cfg.rRotatorAccel = 60 °/s²` request; prism inertia is small. Must be **greater than** NC's Default Acceleration (1500 °/s² out of the box) — TCNC emits a warning otherwise. |
+| Maximum Deceleration | `2000 °/s²` | Same constraint vs Default Deceleration |
 | Jerk | `0` (disabled) | Low-inertia axis, no need for jerk shaping |
 
 Manual jog velocities for bench testing live on the axis's **Functions**
