@@ -8,7 +8,7 @@ Two halves:
 
 - [Part 1 — Hardware reference](#part-1--hardware-reference) — the
   physical and electrical facts (modules, pinouts, motor / encoder
-  specs, the level shifter, mechanical coupling).
+  specs, mechanical coupling).
 - [Part 2 — Bench bring-up procedure](#part-2--bench-bring-up-procedure) —
   step-by-step XAE configuration: NC PTP install, EtherCAT scan, EL7342
   SDOs, NC axes, homing, GVL_IO linking, ADS routing, activate.
@@ -115,103 +115,21 @@ This 1:1 coupling between encoder and prism is what makes the NC scaling
 math simple — see [§ 3 NC task and axes](#3-nc-task-and-axes) below for
 the resulting `360 / 2048` scale.
 
-## Z-pulse level shifter (encoder index → EL7342 I1/I2)
+## Encoder Z signal direct to EL7342 I1 / I2
 
-The RM08ID encoder outputs a **5 V** Z (reference / index) pulse, but the EL7342's
-`Input 1` / `Input 2` pins (where Z is latched for homing) are **+24 VDC** inputs
-per the EL73x2 manual:
+The RM08ID encoder outputs a **5 V** Z (reference / index) pulse. Per the
+EL73x2 manual, the EL7342's `Input 1` / `Input 2` accept the 5 V signal
+directly when used as digital latch inputs for motor A / B (their normal
+24 V digital-input rating is for non-latch use). Bench-verified: the
+encoder Z wires straight into I1 (axis A) / I2 (axis B) on the EL7342 —
+no level shifter, no signal conditioning. Active-high, rising-edge for
+the latch.
 
-> Encoder A / B inputs: `1` ≥ 2.5 V, accepts 5–24 V signal
-> Input 1 / Input 2: digital input (+24 VDC) or digital latch input for motor A/B
-
-So the encoder A and B channels work directly into the EL7342 (they're in spec),
-but the Z signal would sit well below the 24 V input's `1` threshold and the
-EL7342 would never latch. A small per-channel level shifter sits between the
-encoder Z output and the EL7342 latch input.
-
-The encoder Z does **double duty** in this setup: the WINERED axes have **no
-separate limit switch**, so I1 (originally the EL7342's limit switch input)
-carries the Z pulse for both the homing cam role *and* the precise sync role —
-see [§ 4 Homing configuration](#4-homing-configuration) for how that works
-end-to-end.
-
-### Topology
-
-One NPN-transistor common-emitter inverter per Z channel — three components,
-four terminal-block positions per channel (or six if you share the +24 V and
-GND rails across both channels). Inverting; the NC reference latch is configured
-for the falling edge to match.
-
-```
-                       +24 V (EL7342 pin 3, DB25 pin 14)
-                              │
-                              R1  (1 kΩ, ¼ W)
-                              │
-                              ├──► EL7342 I1 (pin 4)  [or I2 pin 8 for ch.B]
-                              │
-                         C (collector)
-                       ┌─[Q1]─┐
-   5 V Z ── R2 ── B    │ 2N3904 │ ── E (emitter) ── GND (EL7342 pin 7)
-         (4.7 kΩ)      │ TO-92  │
-                       └────────┘
-```
-
-### Parts per channel
-
-| Symbol | Spec | Notes |
-|---|---|---|
-| Q1 | **2N3904** NPN, TO-92, V_CEO ≥ 40 V | BC547 / 2N2222 / BC337 are drop-in (verify pin order; see below) |
-| R1 | **1 kΩ**, ¼ W | Collector pull-up to +24 V. Sized so V_input ≈ 19 V at the input's ~5 mA HIGH-state draw — well above the 11–15 V IEC 61131-2 HIGH threshold. |
-| R2 | **4.7 kΩ**, ¼ W | Base current limit from 5 V Z. Gives I_B ≈ 0.9 mA, forcing Q1 into saturation against R1's 24 mA I_C(sat). |
-
-#### Why these values
-
-A higher R1 (e.g. 4.7 kΩ) drops too much voltage at the input's HIGH-state
-current draw — `V_input = 24 − 5 mA × 4.7 kΩ = 0.5 V`, below the threshold,
-and the EL7342 reads `0` even when Q1 is off. R1 = 1 kΩ keeps V_input ≈ 19 V,
-plenty of margin. R2 = 4.7 kΩ then sizes the base drive to keep Q1 fully
-saturated when the encoder Z fires; Q1 power dissipation is ~5 mW, well
-within 2N3904's 625 mW envelope.
-
-Both Z channels (axis A + axis B) use identical circuits.
-
-### 2N3904 pinout (TO-92, flat face toward you)
-
-| Left | Middle | Right |
-|---|---|---|
-| **Emitter** | Base | Collector |
-
-Label the package on the assembly — alternates (BC547, BC337) have different
-orders (BC547 / BC337: C-B-E). Mixing parts without re-checking will short
-+24 V to ground.
-
-### Terminal block wiring
-
-Use a 6-position screw / barrier terminal block (or two 4-position blocks
-side by side). Shared rails for the two channels:
-
-| Pos | Label | Connects |
-|---|---|---|
-| T1 | `+24 V` | EL7342 pin 3 (`Power Encoder +24 V`) |
-| T2 | `GND` | EL7342 pin 7 (`Power Encoder 0 V`) |
-| T3 | `Z A in` | Encoder A Z output (white) |
-| T4 | `I1 out` | EL7342 pin 4 (`Input 1`) |
-| T5 | `Z B in` | Encoder B Z output (white) |
-| T6 | `I2 out` | EL7342 pin 8 (`Input 2`) |
-
-For channel A: clamp R1 between T1 ↔ T4, Q1's collector lead into T4, Q1's
-emitter lead into T2; clamp R2 between T3 ↔ Q1's base (solder R2's base end
-to the middle Q1 lead). Channel B mirrors with T5/T6.
-
-The **only soldered joint per channel** is R2's far end to Q1's base lead.
-Everything else lives in screw clamps.
-
-### Mounting
-
-Either a small DIN-rail mounted terminal block with the components soldered
-between the screw clamps, or a stripboard fragment in a clip-on enclosure
-that breaks out into the DB25 harness. Keep it physically close to the
-EL7342 so the +24 V and GND runs to T1/T2 are short.
+The encoder Z does **double duty** in this setup: the WINERED axes have
+**no separate limit switch**, so I1 (originally the EL7342's limit
+switch input) carries the Z pulse for both the homing cam role *and*
+the precise sync role — see [§ 4 Homing configuration](#4-homing-configuration)
+for how that works end-to-end.
 
 ## Component naming convention
 
@@ -431,13 +349,32 @@ tracking-loop period (default 30 s).
 Link each NC axis's "Drive" and "Encoder" to the EL7342 channel via
 right-click → Link To.
 
+### Link the PLC's `AXIS_REF` instances to the NC axes (manual)
+
+The PLC's `MAIN.st` declares `Axis_A_ref : AXIS_REF` and
+`Axis_B_ref : AXIS_REF`. These must be linked **by hand** in System
+Manager to the NC axes you just created — the PLC project carries the
+ST source but can't know which NC axis to bind to. Without these links
+`FB_Rotator` runs against a placeholder and nothing moves.
+
+In XAE:
+
+1. **MOTION → NC-Task → Axis 1 → PLC**: right-click → **Change Link…** →
+   select **MAIN.Axis_A_ref** (under `<project name>` → MAIN).
+2. **MOTION → NC-Task → Axis 2 → PLC**: same, link to **MAIN.Axis_B_ref**.
+3. Activate the configuration.
+
+Verify in the PLC online view: `MAIN.Axis_A_ref.NcToPlc.ActPos` should
+read live values once the configuration is active. If it stays at 0
+regardless of axis state, the link wasn't established.
+
 ## 4. Homing configuration
 
 The encoder is incremental, so absolute position is lost on power cycle.
 The WINERED drivetrain has **no separate limit switch** — only the
-encoder's Z (index) pulse, wired to the EL7342's I1 / I2 input via the
-[Z-pulse level shifter](#z-pulse-level-shifter-encoder-index--el7342-i1i2)
-from Part 1.
+encoder's Z (index) pulse, wired directly into the EL7342's I1 (axis A)
+/ I2 (axis B) input (the EL7342 accepts 5 V on its latch inputs; no
+level shifter needed — see [§ Encoder Z signal direct to EL7342](#encoder-z-signal-direct-to-el7342-i1--i2)).
 
 That means the Z pulse serves **two roles** in NC's two-phase homing:
 
@@ -452,13 +389,8 @@ That means the Z pulse serves **two roles** in NC's two-phase homing:
   > — [Tc2_MC2 / MC_Home](https://infosys.beckhoff.com/content/1033/tcplclib_tc2_mc2/70117515.html)
 - **Phase 2 (sync):** NC's `Hardware Latch 1` reference mode arms the
   EL7342's external latch (`0x7000:02` for ch.1, `0x7010:02` for ch.2)
-  and captures the encoder count at the next edge of I1. **The
-  Reference Mode must be `(neg. edge)` because the level shifter
-  inverts the Z pulse** — on I1, the leading edge of Z is a falling
-  edge. `(pos. edge)` results in NC hunting for an edge that never
-  comes and firing error `16979 PLC reference cam became free too soon`
-  at `HomingState = 3` after axis travel without any useful diagnostic
-  about the actual problem.
+  and captures the encoder count on the **rising** edge of I1 — the
+  leading edge of the Z pulse. Active-high, `(pos. edge)`.
 
 [`plc/POUs/FB_Rotator.st`](../plc/POUs/FB_Rotator.st) drives
 `bCalibrationCam` from `(Axis.NcToPlc.HomingState < 4)`. `MC_Home`
@@ -469,7 +401,7 @@ as the cam status — no manual control-word writes are needed.
 
 | Field | Value | Notes |
 |---|---|---|
-| Reference Mode (Sync condition) | **`Hardware Latch 1 (neg. edge)`** for Axis A; **`Hardware Latch 2 (neg. edge)`** for Axis B | The `(neg. edge)` polarity matches the level-shifter-inverted Z on I1 / I2. Drives `0x7000:02` / `0x7010:02` Enable latch extern. **Using `(pos. edge)` causes error 16979 at HomingState = 3** — the most misleading failure mode in this stack. |
+| Reference Mode (Sync condition) | **`Hardware Latch 1 (pos. edge)`** for Axis A; **`Hardware Latch 2 (pos. edge)`** for Axis B | NC latches the encoder count on I1's / I2's rising edge — the leading edge of the active-high Z pulse. Drives `0x7000:02` / `0x7010:02` Enable latch extern. |
 | Homing Sensor Source | **`Default: PLC Cam (MC_Home)`** | Routes NC to read the cam from `bCalibrationCam` (= `Axis.PlcToNc.ControlDWord.7`), not from a hardware digital input |
 | Invert Direction for Sync Impulse Search | `FALSE` | Axis search direction during Phase 2 — positive is correct for our setup |
 | Invert Direction for Homing Sensor Search | `FALSE` | Phase 1 cam is software-driven; direction is irrelevant |
@@ -484,11 +416,11 @@ because they're not runtime properties.
 ### EL7342 config — no SDO changes for homing
 
 - `0x8022:30` / `0x8032:30 Invert digital input 1` — leave at factory
-  default `FALSE`. The level-shifter inversion is handled by the
-  Reference Mode's `(neg. edge)` polarity, not by an SDO inversion.
+  default `FALSE`. Z is active-high on I1 / I2; the Reference Mode
+  `(pos. edge)` matches directly.
 - `0x8022:32` / `0x8032:32 Function for input 1` — leave at `0 Normal
   input`. The external-latch role on I1 / I2 is implicit; NC's
-  `Hardware Latch 1 (neg. edge)` reference mode drives the
+  `Hardware Latch 1 (pos. edge)` reference mode drives the
   `0x7000:02` / `0x7010:02` PDO directly.
 
 ### Trigger the homing
@@ -508,7 +440,7 @@ Before the first real homing attempt, confirm the Z latch path is healthy:
 
 1. EL7342 → Process Data → DCM Inputs Ch.1 → watch `0x6000:0D Status of extern latch` (or the I1 status bit in the online view).
 2. With the drive disabled, rotate the gearbox output by hand through a full revolution.
-3. The bit should flicker LOW once per revolution. If it never flickers → level shifter, encoder wiring, or 5 V supply problem; no NC config will save it.
+3. The bit should flicker HIGH once per revolution. If it never flickers → encoder Z wiring or 5 V supply problem; no NC config will save it.
 
 After homing completes:
 

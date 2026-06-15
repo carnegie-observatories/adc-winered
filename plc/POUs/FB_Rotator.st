@@ -17,7 +17,7 @@
 //
 // NC bench-time configuration (System Manager → NC → Axis → Encoder):
 //   Reference Mode (Sync condition) = Hardware Latch 1 (pos. edge)
-//   Invert Direction for Sync Impulse Search = TRUE  (Z inverted by level shifter)
+//   Invert Direction for Sync Impulse Search = FALSE  (Z is active-high on I1)
 //   Reference Velocity (Fast) / (Slow) — bench-tuned values
 //   Home Position (Calibration Value) — final position written after sync
 
@@ -87,13 +87,8 @@ fbStop(Axis := Axis, Execute := rfStop.Q, Deceleration := rDecel);
 // Homing — Beckhoff's documented cam-less pattern for axes with only an
 // encoder Z (no physical reference cam): drive MC_Home.bCalibrationCam from
 // the PLC to simulate a permanently-occupied cam through Phase 1, then let
-// NC's configured Reference Mode (Hardware Latch 1, neg. edge for the
-// level-shifted Z on I1) capture the precise position in Phase 2.
-//
-// Reference Mode polarity matters: the level shifter inverts the Z pulse so
-// on I1 the leading edge of Z is a *falling* edge. NC must be configured
-// for `Hardware Latch 1 (neg. edge)` — `pos. edge` will hunt forever in
-// Phase 2 and fire error 16979 at state 3 with no useful diagnostic.
+// NC's configured Reference Mode (Hardware Latch 1, pos. edge for the
+// active-high Z directly on I1) capture the precise position in Phase 2.
 fbHome(
     Axis            := Axis,
     Execute         := rfHome.Q,
