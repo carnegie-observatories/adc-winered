@@ -21,11 +21,57 @@ htmlcov/
 # uv
 # (uv.lock IS committed)
 
-# TwinCAT XAE — build artefacts and user-local state
-_Boot/
-_CompileInfo/
-.vs/
-*.tsproj.bak
+### TwinCAT3 ###
+# Mirrors github/gitignore TwinCAT3.gitignore (2026-06).
+# website: https://www.beckhoff.com/twincat3/
+
+# TwinCAT PLC
+*.plcproj.bak
+*.plcproj.orig
+*.tpy
+*.tclrs
+*.library
+*.compiled-library
 *.compileinfo
-*.vsidx
-TrialLicense.tclrs
+*.asm
+*.core
+LineIDs.dbg
+LineIDs.dbg.bak
+
+# TwinCAT C++ and shared types
+*.tmc
+*.tmcRefac
+
+# TwinCAT project files
+*.tsproj.bak
+*.tsproj.b?k
+*.tsproj.orig
+*.tspproj.bak
+*.xti.bak
+*.xti.bk?
+*.xti.orig
+*.xtv
+*.xtv.bak
+*.xtv.bk?
+*.xt?.bk?
+*.xt?.orig
+
+# Multiuser specific
+**/.TcGit/
+
+# exclude not required folders
+**/_Boot/
+**/_CompileInfo/
+**/_Libraries/
+**/_ModuleInstall/
+**/_Deployment/
+**/_Repository/
+
+# VS Shell project specific files and folders
+**/.vs/
+*.~u
+*.project.~u
+*.suo
+
+# TwinCAT Measurement
+*.vsm

@@ -35,8 +35,13 @@ plc/
         FB_SlideSim.TcPOU          # software-only slide (settle timer)
 ```
 
-TwinCAT build artefacts (`_Boot/`, `_CompileInfo/`, `.vs/`,
-`*.tsproj.bak`, `TrialLicense.tclrs`) are gitignored.
+TwinCAT build artefacts are gitignored per the official
+[github/gitignore/TwinCAT3.gitignore](https://github.com/github/gitignore/blob/main/TwinCAT3.gitignore)
+patterns — `_Boot/`, `_CompileInfo/`, `_Libraries/`, `_ModuleInstall/`,
+`_Deployment/`, `_Repository/`, `.vs/`, `.TcGit/`, `*.tmc`,
+`*.compiled-library`, `*.compileinfo`, `*.tpy`, `*.tclrs`, and the
+`*.bak` / `*.orig` siblings of `.plcproj` / `.tsproj` / `.xti`.
+XAE regenerates everything in this list on the next build.
 
 ## Editing the PLC code
 
