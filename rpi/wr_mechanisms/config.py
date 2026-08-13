@@ -44,8 +44,10 @@ class Settings:
     # Mechanical polarity: which position the mechanism sits in while its relay
     # is energized. The other position is therefore the powered-down state —
     # what the bench reverts to when this service stops or the Pi loses power.
+    # Both confirmed by eye on wr-pi. Energizing the diffuser *retracts* it, so
+    # unpowered leaves it in the beam — the same fail state as the PLC rack.
     shutter_energized_pos: str = "open"
-    milky_flat_energized_pos: str = "in"
+    milky_flat_energized_pos: str = "out"
 
     log_level: str = field(default="INFO")
 
@@ -64,7 +66,7 @@ def load(env: dict[str, str] | None = None) -> Settings:
             e, "WR_SHUTTER_ENERGIZED_POS", "open", ("open", "closed")
         ),
         milky_flat_energized_pos=_choice(
-            e, "WR_MILKY_FLAT_ENERGIZED_POS", "in", ("in", "out")
+            e, "WR_MILKY_FLAT_ENERGIZED_POS", "out", ("in", "out")
         ),
         log_level=e.get("WR_LOG_LEVEL", "INFO").upper(),
     )

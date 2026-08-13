@@ -100,8 +100,10 @@
     <span class="sub" id="sub-milky"></span>
   </div>
   <div class="buttons">
-    <button data-mech="milky_flat" data-pos="in">Insert</button>
+    <!-- Retract first: it is the energized direction on the WINERED bench, and
+         the powered-down state (diffuser in beam) is the right-hand button. -->
     <button data-mech="milky_flat" data-pos="out">Retract</button>
+    <button data-mech="milky_flat" data-pos="in">Insert</button>
   </div>
 </div>
 
@@ -134,7 +136,7 @@ const MECHS = {
     dot: "dot-shutter", value: "val-shutter", sub: "sub-shutter",
   },
   milky_flat: {
-    positions: ["in", "out"],
+    positions: ["out", "in"],
     cmd: "set_milky_flat",
     label: { in: "In beam", out: "Retracted" },
     lit: "in",

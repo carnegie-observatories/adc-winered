@@ -78,19 +78,20 @@ of the bench rather than something the code can discover:
   left the 12 V enable off, so the board is active-low, as opto-isolated relay
   boards usually are. Energized therefore reads as a *low* pin.
 - **`WR_SHUTTER_ENERGIZED_POS` / `WR_MILKY_FLAT_ENERGIZED_POS`** — mechanical.
-  Which position each mechanism holds while its relay is energized. Defaults
-  are `open` and `in`, i.e. energizing the relay opens the shutter and inserts
-  the diffuser.
+  Which position each mechanism holds while its relay is energized. On `wr-pi`,
+  confirmed by eye: energizing **opens** the shutter and **retracts** the
+  diffuser (`open` / `out`). The diffuser is the counter-intuitive one — it is
+  driven out of the beam, not into it.
 
-Check both by eye before trusting the panel. There is no sensor to catch a
-mistake, and a wrong polarity is silent.
+Re-check both by eye after any rewiring. There is no sensor to catch a mistake,
+and a wrong polarity is silent.
 
 **Fail state.** Stopping the service (or losing power) de-energizes the
 mechanism relays and then the enable line, cutting 12 V — the bench falls back
-to whatever the unpowered actuators rest in. With the default polarity that
-reads as shutter *closed*, diffuser *out*. Note this differs from the PLC rack,
-whose EL2084 channels are wired inverted and rest at shutter closed, diffuser
-*in beam*. A service restart briefly drops the enable line too.
+to whatever the unpowered actuators rest in: shutter **closed**, diffuser **in
+beam**. That matches the PLC rack, whose EL2084 channels are wired inverted to
+land in the same place, so the panel's footer holds for both deployments. A
+service restart briefly drops the enable line too.
 
 This survives the process going away entirely, which is not automatic on an
 active-low board: when the pins are released they revert to inputs, and on
