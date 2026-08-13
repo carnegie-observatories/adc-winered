@@ -83,6 +83,24 @@ async def set_other_insertion(c: Controller, args: dict[str, Any]) -> dict[str, 
     return {"requested": True}
 
 
+async def set_shutter(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
+    pos = _require_str(args, "pos", ("open", "closed"))
+    try:
+        await c.set_shutter(closed=(pos == "closed"))
+    except PlcUnreachable as exc:
+        raise CommandError(ErrorCode.PLC_UNREACHABLE, str(exc)) from exc
+    return {"requested": True}
+
+
+async def set_milky_flat(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
+    pos = _require_str(args, "pos", ("in", "out"))
+    try:
+        await c.set_milky_flat(deploy_in=(pos == "in"))
+    except PlcUnreachable as exc:
+        raise CommandError(ErrorCode.PLC_UNREACHABLE, str(exc)) from exc
+    return {"requested": True}
+
+
 async def set_control_mode(c: Controller, args: dict[str, Any]) -> dict[str, Any]:
     mode = _require_str(args, "mode", ("auto", "off"))
     await c.set_control_mode(ControlMode(mode))
@@ -126,6 +144,8 @@ DISPATCH: dict[str, Handler] = {
     "version": version,
     "set_adc_insertion": set_adc_insertion,
     "set_other_insertion": set_other_insertion,
+    "set_shutter": set_shutter,
+    "set_milky_flat": set_milky_flat,
     "set_control_mode": set_control_mode,
     "move_lens": move_lens,
     "set_auto_update": set_auto_update,

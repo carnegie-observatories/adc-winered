@@ -165,6 +165,51 @@ async def test_status_topic_reflects_control_mode(stack) -> None:
         await ws.close()
 
 
+async def test_shutter_and_milky_flat_commands_reach_status_topic(stack) -> None:
+    server, _, _ = stack
+    ws = await _connect(server)
+    try:
+        await ws.recv()  # hello
+        await ws.send(json.dumps({"type": "subscribe", "topics": ["status"]}))
+        initial = await _recv_until(ws, lambda p: p.get("type") == "state" and p.get("topic") == "status")
+        assert initial["data"]["shutter"] == "closed"
+        assert initial["data"]["milky_flat"] == "in"
+
+        await ws.send(json.dumps({"type": "cmd", "id": "s1", "name": "set_shutter",
+                                  "args": {"pos": "open"}}))
+        ack = await _recv_until(ws, lambda p: p.get("type") == "ack" and p.get("id") == "s1")
+        assert ack["ok"] is True
+
+        await ws.send(json.dumps({"type": "cmd", "id": "m1", "name": "set_milky_flat",
+                                  "args": {"pos": "out"}}))
+        ack = await _recv_until(ws, lambda p: p.get("type") == "ack" and p.get("id") == "m1")
+        assert ack["ok"] is True
+
+        updated = await _recv_until(
+            ws,
+            lambda p: p.get("type") == "state"
+                       and p.get("topic") == "status"
+                       and p.get("data", {}).get("shutter") == "open"
+                       and p.get("data", {}).get("milky_flat") == "out",
+        )
+        assert updated["data"]["shutter"] == "open"
+    finally:
+        await ws.close()
+
+
+async def test_shutter_rejects_bad_position(stack) -> None:
+    server, _, _ = stack
+    ws = await _connect(server)
+    try:
+        await ws.recv()  # hello
+        await ws.send(json.dumps({"type": "cmd", "id": "s2", "name": "set_shutter",
+                                  "args": {"pos": "ajar"}}))
+        ack = await _recv_until(ws, lambda p: p.get("type") == "ack" and p.get("id") == "s2")
+        assert ack["ok"] is False
+    finally:
+        await ws.close()
+
+
 async def test_version_command(stack) -> None:
     server, _, _ = stack
     ws = await _connect(server)

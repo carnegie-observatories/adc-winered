@@ -50,6 +50,10 @@ class PlcSnapshot:
     slide_a: SlideState
     slide_b: SlideState
     heartbeat: bool
+    # Shutter and milky-flat diffuser have no position feedback — the PLC
+    # echoes back the commanded state, so these are requests, not measurements.
+    shutter_closed: bool = False
+    milky_flat_deployed: bool = False
 
 
 class PlcUnreachable(RuntimeError):
@@ -74,3 +78,9 @@ class PlcDriver(Protocol):
 
     async def set_slide(self, slide: Slide, deploy_in: bool) -> None:
         """deploy_in=True drives the solenoid to the IN position."""
+
+    async def set_shutter(self, closed: bool) -> None:
+        """closed=True closes the shutter (EL2084 ch.1 de-energized)."""
+
+    async def set_milky_flat(self, deploy_in: bool) -> None:
+        """deploy_in=True puts the diffuser in the beam (EL2084 ch.2 de-energized)."""

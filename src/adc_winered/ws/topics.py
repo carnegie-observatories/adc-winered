@@ -16,12 +16,16 @@ from ..plc import SlideState
 def status_topic(snap: ControllerSnapshot) -> dict[str, Any]:
     slide_a = _slide_name(snap.plc.slide_a if snap.plc else None)
     slide_b = _slide_name(snap.plc.slide_b if snap.plc else None)
+    plc = snap.plc
     return {
         "adc": slide_a,
         "other": slide_b,
         "control": "auto" if snap.mode is ControlMode.AUTO else "off",
         "update": snap.state is ControllerState.TRACKING,
         "running": snap.state not in (ControllerState.STOPPED, ControllerState.ERROR),
+        # No feedback sensors on either mechanism — these echo the command.
+        "shutter": "closed" if (plc.shutter_closed if plc else True) else "open",
+        "milky_flat": "in" if (plc.milky_flat_deployed if plc else True) else "out",
     }
 
 

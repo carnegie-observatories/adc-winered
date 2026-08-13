@@ -150,6 +150,12 @@ class Controller:
     async def set_slide(self, slide: Slide, deploy_in: bool) -> None:
         await self._plc.set_slide(slide, deploy_in)
 
+    async def set_shutter(self, closed: bool) -> None:
+        await self._plc.set_shutter(closed)
+
+    async def set_milky_flat(self, deploy_in: bool) -> None:
+        await self._plc.set_milky_flat(deploy_in)
+
     async def trigger_update(self) -> None:
         """One-shot recompute + dispatch (used by the WS `setAutoUpdate` cmd)."""
         self._track_event.set()

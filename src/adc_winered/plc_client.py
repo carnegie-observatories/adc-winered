@@ -65,6 +65,15 @@ _SLIDE_SYMBOLS = {
     Slide.B: {"state": "GVL_State.eSlideB", "deploy": "GVL_Cmd.bSlideB_Deploy"},
 }
 
+# Shutter / milky flat: plain DOs on the EL2084, no feedback sensors. The
+# GVL_State bits echo the command. Both channels are wired so that the PLC
+# de-energizes the output to reach the named condition — that inversion lives
+# in FB_AdcController, so these symbols read in physical terms.
+_SHUTTER_STATE = "GVL_State.bShutter_Closed"
+_SHUTTER_CMD = "GVL_Cmd.bShutter_Closed"
+_MILKY_FLAT_STATE = "GVL_State.bMilkyFlat_Deployed"
+_MILKY_FLAT_CMD = "GVL_Cmd.bMilkyFlat_Deploy"
+
 _HEARTBEAT = "GVL_State.bHeartbeat"
 
 
@@ -106,6 +115,8 @@ class PlcClient:
                    if k in ("position", "busy", "done", "error", "error_id", "ready")},
                 "slide_a": plc.read_by_name(_SLIDE_SYMBOLS[Slide.A]["state"]),
                 "slide_b": plc.read_by_name(_SLIDE_SYMBOLS[Slide.B]["state"]),
+                "shutter_closed": plc.read_by_name(_SHUTTER_STATE),
+                "milky_flat_deployed": plc.read_by_name(_MILKY_FLAT_STATE),
                 "heartbeat": plc.read_by_name(_HEARTBEAT),
             }
 
@@ -134,6 +145,8 @@ class PlcClient:
             slide_a=_STATE_BY_INT.get(int(vals["slide_a"]), SlideState.ERROR),
             slide_b=_STATE_BY_INT.get(int(vals["slide_b"]), SlideState.ERROR),
             heartbeat=bool(vals["heartbeat"]),
+            shutter_closed=bool(vals["shutter_closed"]),
+            milky_flat_deployed=bool(vals["milky_flat_deployed"]),
         )
 
     async def move_axis(self, axis: Axis, target_deg: float) -> None:
@@ -151,6 +164,12 @@ class PlcClient:
 
     async def set_slide(self, slide: Slide, deploy_in: bool) -> None:
         await self._write_many({_SLIDE_SYMBOLS[slide]["deploy"]: bool(deploy_in)})
+
+    async def set_shutter(self, closed: bool) -> None:
+        await self._write_many({_SHUTTER_CMD: bool(closed)})
+
+    async def set_milky_flat(self, deploy_in: bool) -> None:
+        await self._write_many({_MILKY_FLAT_CMD: bool(deploy_in)})
 
     # --- helpers --------------------------------------------------------
 

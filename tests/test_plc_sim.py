@@ -129,6 +129,29 @@ async def test_slide_transitions_through_moving(clock: FakeClock, sim: PlcSim) -
     assert snap.slide_a is SlideState.OUT
 
 
+async def test_shutter_and_milky_flat_default_to_de_energized_state(sim: PlcSim) -> None:
+    # Both EL2084 channels are wired so de-energized = shutter closed and
+    # diffuser in beam; the sim starts from that same safe state.
+    snap = await sim.read()
+    assert snap.shutter_closed is True
+    assert snap.milky_flat_deployed is True
+
+
+async def test_shutter_and_milky_flat_follow_commands(sim: PlcSim) -> None:
+    # Plain outputs — no settle time, so the change is visible on the next read.
+    await sim.set_shutter(closed=False)
+    await sim.set_milky_flat(deploy_in=False)
+    snap = await sim.read()
+    assert snap.shutter_closed is False
+    assert snap.milky_flat_deployed is False
+
+    await sim.set_shutter(closed=True)
+    await sim.set_milky_flat(deploy_in=True)
+    snap = await sim.read()
+    assert snap.shutter_closed is True
+    assert snap.milky_flat_deployed is True
+
+
 async def test_heartbeat_toggles_each_read(sim: PlcSim) -> None:
     h1 = (await sim.read()).heartbeat
     h2 = (await sim.read()).heartbeat

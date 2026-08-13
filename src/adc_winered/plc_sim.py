@@ -1,9 +1,10 @@
 """In-process PLC simulator.
 
 Same interface as `plc_client.PlcClient`. Models the two rotators as constant-
-velocity slewers and the two slides as solenoids with a fixed settle time. Used
-by the controller, the WS protocol tests, and end-to-end integration without
-any TwinCAT runtime.
+velocity slewers and the two slides as solenoids with a fixed settle time. The
+shutter and milky-flat diffuser are plain outputs with no feedback, so the sim
+just holds whatever was last commanded. Used by the controller, the WS protocol
+tests, and end-to-end integration without any TwinCAT runtime.
 
 This module deliberately does not import pyads — it must work on developer
 laptops with no Beckhoff routing configured.
@@ -65,6 +66,11 @@ class PlcSim:
         self._b = _AxisSimState()
         self._slide_a = _SlideSimState()
         self._slide_b = _SlideSimState()
+        # Shutter / milky flat are plain outputs on the PLC — no settle time,
+        # no feedback — so the sim just holds the commanded value. Defaults
+        # match the de-energized hardware state: shutter closed, diffuser in.
+        self._shutter_closed = True
+        self._milky_flat_deployed = True
         self._heartbeat = False
         self._connected = False
 
@@ -83,6 +89,8 @@ class PlcSim:
             slide_a=self._slide_a.state,
             slide_b=self._slide_b.state,
             heartbeat=self._heartbeat,
+            shutter_closed=self._shutter_closed,
+            milky_flat_deployed=self._milky_flat_deployed,
         )
 
     async def move_axis(self, axis: Axis, target_deg: float) -> None:
@@ -126,6 +134,12 @@ class PlcSim:
         sim.deploy_in = deploy_in
         sim.state = SlideState.MOVING
         sim.transition_at = self._clock() + self._settle
+
+    async def set_shutter(self, closed: bool) -> None:
+        self._shutter_closed = bool(closed)
+
+    async def set_milky_flat(self, deploy_in: bool) -> None:
+        self._milky_flat_deployed = bool(deploy_in)
 
     # --- helpers --------------------------------------------------------
 
