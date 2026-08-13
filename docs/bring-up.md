@@ -26,6 +26,7 @@ Two halves:
 | 3 | EL1084 | 4-ch 24 V DI — slide limit switches | 100 mA + load |
 | 4 | EL7342 | 2-ch DC drive + incremental encoder — both rotators | 150 mA |
 | 5 | EL9505 | 5 V supply for encoders | 90 mA + 0.5 A |
+| 6 | EL2084 | 4-ch 24 V DO (negative-switching) — shutter (ch.1), milky-flat diffuser (ch.2) | 100 mA |
 
 Us fuse: 1 A. Up fuse: max 10 A. PLC static IP: 10.8.104.50/24 (see
 [references/plc_configuration.md](references/plc_configuration.md)).
@@ -187,8 +188,15 @@ Device 1 (EtherCAT)
     ├── Term 2 (EL2002)   — 2-ch DO 24V
     ├── Term 3 (EL1084)   — 4-ch DI 24V
     ├── Term 4 (EL7342)   — 2-ch DC drive + encoder
-    └── Term 5 (EL9505)   — 5V power supply
+    ├── Term 5 (EL9505)   — 5V power supply
+    └── Term 7 (EK1200)   — second coupler segment
+        └── Term 13 (EL2084)  — 4-ch DO, ch.1 shutter / ch.2 milky flat
 ```
+
+Both EL2084 channels are wired inverted: energized opens the shutter and
+retracts the diffuser, so a de-energized rack leaves the shutter **closed**
+and the diffuser **in the beam**. `FB_AdcController` applies the inversion,
+so `GVL_Cmd.bShutter_Closed` / `bMilkyFlat_Deploy` name the physical state.
 
 Module numbering may differ on your bench. Whatever it is, update the
 `TcLinkTo` paths in `plc/adc/adc/GVLs/GVL_IO.TcGVL` to match.

@@ -20,8 +20,10 @@ Both expose the same coroutines:
 | `move_axis(axis, target_deg)` | Write target + pulse `bGo`; non-blocking |
 | `stop_axis(axis)` / `home_axis(axis)` / `reset_axis(axis)` | Edge-triggered commands |
 | `set_slide(slide, deploy_in)` | Level-triggered solenoid drive |
+| `set_shutter(closed)` | Level-triggered; `closed=True` closes the shutter |
+| `set_milky_flat(deploy_in)` | Level-triggered; `deploy_in=True` puts the diffuser in the beam |
 
-`PlcSnapshot` carries `axis_a`, `axis_b` (each `AxisStatus(position_deg, busy, done, error, error_id)`), `slide_a`, `slide_b` (`SlideState` enum: IN / OUT / MOVING / ERROR), and a `heartbeat` bit.
+`PlcSnapshot` carries `axis_a`, `axis_b` (each `AxisStatus(position_deg, busy, done, error, error_id)`), `slide_a`, `slide_b` (`SlideState` enum: IN / OUT / MOVING / ERROR), `shutter_closed` and `milky_flat_deployed` bools, and a `heartbeat` bit.
 
 ## ADS symbol layout
 
@@ -40,6 +42,8 @@ nAxisB_ErrorId : UDINT
 bAxisB_Ready  : BOOL
 eSlideA : E_SlideState           // 0=OUT, 1=IN, 2=MOVING, 3=ERROR
 eSlideB : E_SlideState
+bShutter_Closed : BOOL           // echoes the command — no feedback sensor
+bMilkyFlat_Deployed : BOOL       // echoes the command — no feedback sensor
 bHeartbeat : BOOL                // toggled by the PLC each cycle
 ```
 
@@ -52,7 +56,14 @@ bAxisA_Stop / bAxisB_Stop : BOOL
 bAxisA_Home / bAxisB_Home : BOOL
 bAxisA_Reset / bAxisB_Reset : BOOL
 bSlideA_Deploy / bSlideB_Deploy : BOOL   // level: TRUE = IN
+bShutter_Closed : BOOL                   // level: TRUE = shutter closed
+bMilkyFlat_Deploy : BOOL                 // level: TRUE = diffuser in beam
 ```
+
+The shutter and milky-flat commands name the *physical* condition. Both EL2084
+channels are wired inverted, so `FB_AdcController` de-energizes the output to
+reach the named state — meaning a de-energized rack (PLC stopped, sim mode,
+power loss) leaves the shutter closed and the diffuser in the beam.
 
 If you change a symbol name, change both the `.TcGVL` declaration and the `_AXIS_SYMBOLS` / `_SLIDE_SYMBOLS` tables in `plc_client.py`. Keep the two in lockstep.
 

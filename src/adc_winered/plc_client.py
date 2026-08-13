@@ -5,7 +5,7 @@ Thin async wrapper around `pyads`. All blocking ADS calls run via
 clears the per-axis `bGo` rising-edge bits after consuming them — the caller
 just writes target + sets `bGo := TRUE`.
 
-Symbol names mirror the GVL layout in `plc/WineredADC/GVLs/`.
+Symbol names mirror the GVL layout in `plc/adc/adc/GVLs/`.
 """
 
 from __future__ import annotations

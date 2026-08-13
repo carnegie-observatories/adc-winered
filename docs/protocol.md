@@ -36,7 +36,7 @@ Ack (one per `cmd`, keyed by `id`):
 
 | Topic | Shape | Source |
 |---|---|---|
-| `status` | `{adc, other, control, update, running}` | controller + plc snapshot |
+| `status` | `{adc, other, shutter, milky_flat, control, update, running}` | controller + plc snapshot |
 | `lens` | `{lens_a:{encoder,target,moving}, lens_b:{...}}` | plc snapshot + computed targets |
 | `telescope` | `{elevation, rotator}` | tcs sample |
 | `logs` | `{entries: [...]}` on snapshot; `event` frames per live entry | log ring buffer |
@@ -54,6 +54,8 @@ Names and argument shapes follow the canonical client's APP_REGISTRY (snake_case
 | `version` | `{}` | Returns `{version, protocol_version, app}` |
 | `set_adc_insertion` | `{pos: "in"\|"out"}` | Drive Slide A |
 | `set_other_insertion` | `{pos: "in"\|"out"}` | Drive Slide B |
+| `set_shutter` | `{pos: "open"\|"closed"}` | Drive the shutter (EL2084 ch.1) |
+| `set_milky_flat` | `{pos: "in"\|"out"}` | Drive the milky-flat diffuser (EL2084 ch.2) |
 | `set_control_mode` | `{mode: "auto"\|"off"}` | Enter / leave tracking |
 | `move_lens` | `{lens: "A"\|"B", angle: float}` | Manual axis move (bypasses tracking) |
 | `set_auto_update` | `{enabled: bool}` | Alias of `set_control_mode` (UI naming) |

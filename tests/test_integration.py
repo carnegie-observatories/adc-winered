@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import json
 
-import pytest
 import websockets
 
 from adc_winered.controller import Controller

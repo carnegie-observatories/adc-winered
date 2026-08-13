@@ -11,7 +11,7 @@ WINERED ADC control stack. Two halves: a TwinCAT 3 PLC project for low-level mot
 | Path | Contents |
 |---|---|
 | `src/adc_winered/` | Python server — config, correction algorithm, PLC/TCS clients (and their sims), controller state machine, `ws/` server |
-| `plc/` | TwinCAT 3 solution (`WineredADC.sln`) — GVLs, FBs, NC axis setup |
+| `plc/` | TwinCAT 3 solution (`adc.sln`) — GVLs, FBs, NC axis setup |
 | `tests/` | pytest suite — runs against in-process PLC + TCS sims, no hardware needed |
 | `docs/` | Lean markdown docs, one topic per file. Start at [`docs/README.md`](docs/README.md) |
 | `docs/plans/` | Approved implementation plans, committed before execution |
