@@ -12,6 +12,7 @@ WINERED ADC control stack. Two halves: a TwinCAT 3 PLC project for low-level mot
 |---|---|
 | `src/adc_winered/` | Python server — config, correction algorithm, PLC/TCS clients (and their sims), controller state machine, `ws/` server |
 | `plc/` | TwinCAT 3 solution (`adc.sln`) — GVLs, FBs, NC axis setup |
+| `rpi/` | `wr-mechanisms` — standalone Raspberry Pi server for the shutter + milky flat over GPIO relays, no PLC. Serves `web/mechanisms.html` on its own port. Separate project, own `pyproject.toml`, own tests |
 | `tests/` | pytest suite — runs against in-process PLC + TCS sims, no hardware needed |
 | `docs/` | Lean markdown docs, one topic per file. Start at [`docs/README.md`](docs/README.md) |
 | `docs/plans/` | Approved implementation plans, committed before execution |

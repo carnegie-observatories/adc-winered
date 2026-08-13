@@ -14,3 +14,5 @@ Lean reference for the WINERED ADC control stack. One topic per file.
 | [diagnostic.md](diagnostic.md) | How to drive the server from a browser (canonical client, standalone diagnostic, mechanisms panel) |
 
 Plans (committed before execution) live under [`plans/`](plans/). Vendor datasheets live under [`references/`](references/).
+
+The Raspberry Pi stand-in for the shutter and milky-flat diffuser — same WS surface, GPIO relays instead of a PLC — documents itself in [`../rpi/README.md`](../rpi/README.md).

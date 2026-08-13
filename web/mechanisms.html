@@ -145,6 +145,15 @@ const MECHS = {
 const CONFIRM_TIMEOUT_MS = 6000;
 
 const $ = (id) => document.getElementById(id);
+
+// Default to the host this page came from: the Pi mechanisms server hands the
+// page out over HTTP on the same port it listens for WebSockets on, so "where
+// I was loaded from" is the right guess. `location.hostname` is empty for a
+// file:// open, hence the fallback. The port default deliberately stays 52403
+// rather than following location.port — the other way to serve this page is a
+// static server on some unrelated port, with the ADC server still on 52403.
+$("host").value = location.hostname || "localhost";
+
 const q = new URL(location.href).searchParams;
 if (q.get("host")) $("host").value = q.get("host");
 if (q.get("port")) $("port").value = q.get("port");

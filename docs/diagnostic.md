@@ -58,6 +58,10 @@ What it does:
 
 Because neither mechanism has a position sensor, everything on the page reflects the *commanded* state. The footer says so, along with the de-energized fail state (shutter closed, diffuser in beam).
 
+The same page is what the PLC-free Raspberry Pi serves (`rpi/`, see [`../rpi/README.md`](../rpi/README.md)) — literally the same file, symlinked into that package. On the Pi there is nothing to serve or open by hand: the service hands the page out on its own port, so <http://wr-pi:52403/> is the whole thing. That box advertises `mechanisms` and nothing else, and the page defaults its host to wherever it was loaded from.
+
+The footer's fail state is the *PLC* wiring; the Pi's depends on its configured relay polarity.
+
 ## When the UIs diverge
 
 The standalone diagnostic page is hand-mirrored from `lco-instrument-web/diagnostic.js`. If a new command lands in the canonical registry, mirror it in `web/diagnostic.html`'s `COMMANDS` array. The server side is the source of truth for what's actually implemented — keep `ws/commands.py` aligned with all three UIs.

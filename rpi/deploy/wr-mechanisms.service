@@ -1,0 +1,36 @@
+[Unit]
+Description=WINERED shutter + milky-flat WebSocket server and panel
+Documentation=file://__APP_DIR__/src/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+# /dev/gpiochip* is group-owned by gpio on Raspberry Pi OS.
+SupplementaryGroups=gpio
+WorkingDirectory=__APP_DIR__/src
+# Run from the synced source: pip-installing the package would need a build
+# backend from PyPI, and this box has no route to it. The venv exists for
+# websockets (and sees apt's gpiozero/lgpio via --system-site-packages).
+Environment=PYTHONPATH=__APP_DIR__/src
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/default/wr-mechanisms
+ExecStart=__APP_DIR__/venv/bin/python -m wr_mechanisms serve
+Restart=always
+RestartSec=2
+# A clean stop de-energizes the relays, which cuts 12 V to both mechanisms.
+# Give the process room to do that before SIGKILL.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+
+# The service pokes GPIO and serves one static page.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
