@@ -41,13 +41,21 @@ class Settings:
     # everything, silently.
     active_high: bool = False
 
+    # Whether the enable relay has to be energized to pass 12 V. True for a
+    # normally-open contact, false for normally-closed — with NC the load is
+    # live whenever the coil is off, including while this service is stopped.
+    enable_energized: bool = True
+
     # Mechanical polarity: which position the mechanism sits in while its relay
-    # is energized. The other position is therefore the powered-down state —
-    # what the bench reverts to when this service stops or the Pi loses power.
-    # Both confirmed by eye on wr-pi. Energizing the diffuser *retracts* it, so
-    # unpowered leaves it in the beam — the same fail state as the PLC rack.
-    shutter_energized_pos: str = "open"
-    milky_flat_energized_pos: str = "out"
+    # is energized. The other position is what the mechanism holds while the
+    # coil is off — and, as long as the enable relay is normally-open, also
+    # what the bench falls back to when this service stops.
+    #
+    # Both relays run on their normally-closed contacts, so energizing the coil
+    # *removes* 12 V: the shutter closes and the diffuser drops into the beam.
+    # Flip these two if the contacts ever go back to normally-open.
+    shutter_energized_pos: str = "closed"
+    milky_flat_energized_pos: str = "in"
 
     log_level: str = field(default="INFO")
 
@@ -62,11 +70,12 @@ def load(env: dict[str, str] | None = None) -> Settings:
         pin_shutter=_int(e, "WR_PIN_SHUTTER", DEFAULT_PIN_SHUTTER),
         pin_milky_flat=_int(e, "WR_PIN_MILKY_FLAT", DEFAULT_PIN_MILKY_FLAT),
         active_high=_bool(e, "WR_ACTIVE_HIGH", False),
+        enable_energized=_bool(e, "WR_ENABLE_ENERGIZED", True),
         shutter_energized_pos=_choice(
-            e, "WR_SHUTTER_ENERGIZED_POS", "open", ("open", "closed")
+            e, "WR_SHUTTER_ENERGIZED_POS", "closed", ("open", "closed")
         ),
         milky_flat_energized_pos=_choice(
-            e, "WR_MILKY_FLAT_ENERGIZED_POS", "out", ("in", "out")
+            e, "WR_MILKY_FLAT_ENERGIZED_POS", "in", ("in", "out")
         ),
         log_level=e.get("WR_LOG_LEVEL", "INFO").upper(),
     )

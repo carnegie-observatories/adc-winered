@@ -44,31 +44,38 @@ class Relays(abc.ABC):
             MILKY_FLAT: settings.pin_milky_flat,
         }
         self._active_high = settings.active_high
+        self._enable_energized = settings.enable_energized
         self._energized = {name: False for name in self._pins}
 
     # --- lifecycle -------------------------------------------------------
 
     def start(self) -> None:
-        """Claim the pins and raise the enable line.
+        """Claim the pins and put the enable line into its 12 V-on state.
 
-        Enable is asserted here and stays asserted for the life of the
-        process. Both mechanisms are left de-energized, which is the state the
-        hardware was already resting in.
+        Enable is set here and left alone for the life of the process. Which
+        coil state that means depends on the contact it runs through, hence
+        `enable_energized`. Both mechanisms are left de-energized, which is the
+        state the hardware was already resting in.
         """
         self._open()
-        self.set(ENABLE, True)
+        self.set(ENABLE, self._enable_energized)
         log.info(
-            "relays up: enable=D%d shutter=D%d milky_flat=D%d (%s relay board)",
-            self._pins[ENABLE], self._pins[SHUTTER], self._pins[MILKY_FLAT],
+            "relays up: enable=D%d (%s) shutter=D%d milky_flat=D%d (%s relay board)",
+            self._pins[ENABLE],
+            "energized" if self._enable_energized else "de-energized",
+            self._pins[SHUTTER], self._pins[MILKY_FLAT],
             "active-high" if self._active_high else "active-low",
         )
 
     def close(self) -> None:
-        """De-energize everything, enable last, and release the pins.
+        """De-energize every coil, enable last, and release the pins.
 
-        Dropping enable cuts 12 V to both mechanisms, so they revert to their
-        unpowered rest positions. That is deliberate: a stopped service should
-        leave the bench in a known state rather than a latched one.
+        With the enable relay on a normally-open contact this cuts 12 V to both
+        mechanisms, so they revert to their unpowered rest positions — a
+        stopped service should leave the bench in a known state rather than a
+        latched one. On a normally-closed enable contact the opposite holds and
+        12 V survives the process; the released pins settle the same way, so
+        that is a wiring decision, not something this code can undo.
         """
         for name in (SHUTTER, MILKY_FLAT, ENABLE):
             try:

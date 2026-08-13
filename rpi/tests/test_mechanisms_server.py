@@ -103,22 +103,23 @@ async def test_commands_drive_relays_and_publish_state(stack) -> None:
         await ws.send(json.dumps({"type": "subscribe", "topics": ["mechanisms"]}))
         await _recv_until(ws, lambda p: p.get("type") == "state")
 
+        # Both mechanisms sit on normally-closed contacts, so closing the
+        # shutter and inserting the diffuser are the energized directions.
         await ws.send(json.dumps({"type": "cmd", "id": "s1", "name": "set_shutter",
-                                  "args": {"pos": "open"}}))
+                                  "args": {"pos": "closed"}}))
         ack = await _recv_until(ws, lambda p: p.get("type") == "ack" and p.get("id") == "s1")
         assert ack["ok"] is True
         updated = await _recv_until(
             ws,
-            lambda p: p.get("type") == "state" and p["data"]["shutter"] == "open",
+            lambda p: p.get("type") == "state" and p["data"]["shutter"] == "closed",
         )
-        assert updated["data"]["milky_flat"] == "in"
+        assert updated["data"]["milky_flat"] == "out"
         assert relays.is_energized(SHUTTER) is True
 
-        # Retracting the diffuser is the energized direction on this bench.
         await ws.send(json.dumps({"type": "cmd", "id": "m1", "name": "set_milky_flat",
-                                  "args": {"pos": "out"}}))
+                                  "args": {"pos": "in"}}))
         await _recv_until(ws, lambda p: p.get("type") == "ack" and p.get("id") == "m1")
-        await _recv_until(ws, lambda p: p.get("type") == "state" and p["data"]["milky_flat"] == "out")
+        await _recv_until(ws, lambda p: p.get("type") == "state" and p["data"]["milky_flat"] == "in")
         assert relays.is_energized(MILKY_FLAT) is True
     finally:
         await ws.close()
@@ -132,13 +133,13 @@ async def test_recommanding_the_same_position_still_echoes(stack) -> None:
         await ws.recv()  # hello
         await ws.send(json.dumps({"type": "subscribe", "topics": ["mechanisms"]}))
         snap = await _recv_until(ws, lambda p: p.get("type") == "state")
-        assert snap["data"]["shutter"] == "closed"
+        assert snap["data"]["shutter"] == "open"
 
         await ws.send(json.dumps({"type": "cmd", "id": "s1", "name": "set_shutter",
-                                  "args": {"pos": "closed"}}))
+                                  "args": {"pos": "open"}}))
         await _recv_until(ws, lambda p: p.get("type") == "ack")
         echo = await _recv_until(ws, lambda p: p.get("type") == "state")
-        assert echo["data"]["shutter"] == "closed"
+        assert echo["data"]["shutter"] == "open"
     finally:
         await ws.close()
 
@@ -229,12 +230,21 @@ def test_enable_is_energized_at_startup_and_dropped_on_close() -> None:
     mechanisms.start()
     assert relays.is_energized(ENABLE) is True
 
-    mechanisms.set_shutter("open")
+    mechanisms.set_shutter("closed")
     mechanisms.set_milky_flat("in")
     mechanisms.close()
     # Everything down, and enable last so 12 V never outlives the mechanisms.
     assert [name for name in (SHUTTER, MILKY_FLAT, ENABLE) if relays.is_energized(name)] == []
     assert relays.writes[-1] == (SIM.pin_enable, False)
+
+
+def test_normally_closed_enable_contact_leaves_its_coil_off() -> None:
+    """With NC enable, 12 V flows when the coil is *off* — so don't energize it."""
+    nc_enable = dataclasses.replace(SIM, enable_energized=False)
+    relays = SimRelays(nc_enable)
+    Mechanisms(relays, nc_enable).start()
+    assert relays.is_energized(ENABLE) is False
+    assert relays.writes == [(SIM.pin_enable, False)]
 
 
 def test_pins_follow_the_wiring_table() -> None:
@@ -244,48 +254,57 @@ def test_pins_follow_the_wiring_table() -> None:
     relays.writes.clear()
 
     # The energized position of each mechanism, so both writes are True.
-    mechanisms.set_milky_flat("out")
-    mechanisms.set_shutter("open")
+    mechanisms.set_milky_flat("in")
+    mechanisms.set_shutter("closed")
     assert relays.writes == [(13, True), (6, True)]
 
 
-def test_powered_down_state_follows_the_energized_position() -> None:
-    """Swapping the mechanical polarity swaps what "relay off" means."""
+def test_coil_off_state_follows_the_energized_position() -> None:
+    """Swapping the mechanical polarity swaps what "coil off" means.
+
+    Which is the whole point of the setting: normally-open contacts would put
+    these two the other way round.
+    """
     inverted = dataclasses.replace(
-        SIM, shutter_energized_pos="closed", milky_flat_energized_pos="in"
+        SIM, shutter_energized_pos="open", milky_flat_energized_pos="out"
     )
     relays = SimRelays(inverted)
     mechanisms = Mechanisms(relays, inverted)
     mechanisms.start()
-    assert mechanisms.snapshot() == {"shutter": "open", "milky_flat": "out"}
+    assert mechanisms.snapshot() == {"shutter": "closed", "milky_flat": "in"}
 
-    mechanisms.set_shutter("closed")
+    mechanisms.set_shutter("open")
     assert relays.is_energized(SHUTTER) is True
-    assert mechanisms.snapshot()["shutter"] == "closed"
+    assert mechanisms.snapshot()["shutter"] == "open"
 
 
-def test_powered_down_state_is_the_safe_one() -> None:
-    """Unpowered: shutter closed, diffuser in beam — the PLC rack's fail state.
+def test_startup_state_is_the_coil_off_state() -> None:
+    """Before any command both coils are off, and their normally-closed
+    contacts leave the mechanisms powered: shutter open, diffuser retracted.
 
-    This is what the bench sits in whenever the service is stopped, so it is
-    also what the defaults have to produce before any command arrives.
+    Not to be confused with the *stopped-service* state. Enable is
+    normally-open, so stopping the service cuts 12 V and the actuators fall
+    back to shutter closed / diffuser in beam — invisible to this model, which
+    only knows coil states.
     """
     relays = SimRelays(SIM)
     mechanisms = Mechanisms(relays, SIM)
     mechanisms.start()
-    assert mechanisms.snapshot() == {"shutter": "closed", "milky_flat": "in"}
+    assert mechanisms.snapshot() == {"shutter": "open", "milky_flat": "out"}
 
 
 def test_defaults_match_the_wr_pi_bench() -> None:
-    """Both polarities as measured/confirmed on wr-pi.
+    """Every polarity as wired on wr-pi.
 
     Pinned here so changing one back is a deliberate act, not a merge accident —
     nothing else in the stack would notice an inversion.
     """
     s = Settings()
     assert s.active_high is False           # D26 high left the 12 V enable off
-    assert s.shutter_energized_pos == "open"
-    assert s.milky_flat_energized_pos == "out"  # energizing retracts the diffuser
+    assert s.enable_energized is True       # enable runs on a NO contact
+    # Both mechanisms on NC contacts: energizing the coil removes their 12 V.
+    assert s.shutter_energized_pos == "closed"
+    assert s.milky_flat_energized_pos == "in"
 
 
 def test_unknown_position_raises_before_any_write() -> None:

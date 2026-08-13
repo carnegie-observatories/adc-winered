@@ -78,20 +78,32 @@ of the bench rather than something the code can discover:
   left the 12 V enable off, so the board is active-low, as opto-isolated relay
   boards usually are. Energized therefore reads as a *low* pin.
 - **`WR_SHUTTER_ENERGIZED_POS` / `WR_MILKY_FLAT_ENERGIZED_POS`** — mechanical.
-  Which position each mechanism holds while its relay is energized. On `wr-pi`,
-  confirmed by eye: energizing **opens** the shutter and **retracts** the
-  diffuser (`open` / `out`). The diffuser is the counter-intuitive one — it is
-  driven out of the beam, not into it.
+  Which position each mechanism holds while its relay **coil** is energized.
+  Both mechanisms run through their **normally-closed** contacts, so energizing
+  the coil *removes* 12 V: the shutter closes and the diffuser drops into the
+  beam (`closed` / `in`). Flip both if the contacts ever go back to
+  normally-open.
+- **`WR_ENABLE_ENERGIZED`** — whether the enable relay has to be energized to
+  pass 12 V. `true` for a normally-open contact (the default, and what D26 is
+  wired to); `false` for normally-closed, where the 12 V is live whenever the
+  coil is off — including while this service is stopped.
 
-Re-check both by eye after any rewiring. There is no sensor to catch a mistake,
-and a wrong polarity is silent.
+Re-check by eye after any rewiring. There is no sensor to catch a mistake, and
+a wrong polarity is silent.
 
 **Fail state.** Stopping the service (or losing power) de-energizes the
-mechanism relays and then the enable line, cutting 12 V — the bench falls back
-to whatever the unpowered actuators rest in: shutter **closed**, diffuser **in
-beam**. That matches the PLC rack, whose EL2084 channels are wired inverted to
-land in the same place, so the panel's footer holds for both deployments. A
-service restart briefly drops the enable line too.
+mechanism coils and then the enable coil. Because enable is normally-open, that
+cuts 12 V to both mechanisms whatever their own contacts are doing, and the
+bench falls back to what the unpowered actuators rest in: shutter **closed**,
+diffuser **in beam**. That matches the PLC rack, whose EL2084 channels are
+wired inverted to land in the same place, so the panel's footer holds for both
+deployments. A service restart briefly drops the enable line too.
+
+Note the enable relay is what makes this true. Moving it to a normally-closed
+contact would leave 12 V live with the service stopped, and the mechanisms'
+own NC contacts would then hold them *powered* — shutter open, diffuser out —
+which is the opposite fail state. Set `WR_ENABLE_ENERGIZED=false` if that
+rewiring ever happens, and re-read this paragraph.
 
 This survives the process going away entirely, which is not automatic on an
 active-low board: when the pins are released they revert to inputs, and on
