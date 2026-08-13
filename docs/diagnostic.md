@@ -1,6 +1,7 @@
-# Diagnostic UIs
+# Browser UIs
 
-Two ways to drive the server from a browser:
+Three ways to drive the server from a browser. The first two are general
+diagnostic surfaces; the third is a single-purpose operations page.
 
 ## 1. Canonical client — `lco-instrument-web`
 
@@ -35,6 +36,30 @@ What it gives you:
 
 It is **diagnostic only** — no main-window layout, no per-app polish. If you need the instrument-faithful UI, use the canonical client.
 
-## When the two diverge
+## 3. Mechanisms panel — `web/mechanisms.html`
 
-The standalone page is hand-mirrored from `lco-instrument-web/diagnostic.js`. If a new command lands in the canonical registry, mirror it in `web/diagnostic.html`'s `COMMANDS` array. The server side is the source of truth for what's actually implemented — keep `ws/commands.py` aligned with both UIs.
+A dedicated control page for the two WINERED-only mechanisms: the shutter and the milky-flat diffuser. Nothing else — no rotators, no slides, no tracking — so it can be left open on a bench display or a phone during calibrations.
+
+```sh
+python3 -m http.server 8000 --directory web
+# open http://localhost:8000/mechanisms.html?host=<host>&port=52403
+```
+
+Same conventions as the diagnostic page: single self-contained file, no build, `host` / `port` from the URL query or the input fields.
+
+What it does:
+
+- Subscribes to the `mechanisms` topic only, and drives `set_shutter` / `set_milky_flat`.
+- Shows each mechanism's state as a word plus an indicator dot, lit in the light-blocking position (shutter closed, diffuser in beam).
+- Marks a button *pending* between the command and the server's echo, and reports it if no confirmation arrives within 6 s.
+- Surfaces `ack.ok == false` errors (e.g. `plc_unreachable`) in place rather than failing silently.
+- Reconnects on its own with a capped backoff, so a server restart doesn't need a page reload.
+- Refuses to pretend: if the connected server doesn't advertise the `mechanisms` topic it shows a banner and disables the controls. Every ADC server shares the `adc` app tag and port 52403, so that advertisement is the only honest signal that these mechanisms exist on the instrument you're talking to.
+
+Because neither mechanism has a position sensor, everything on the page reflects the *commanded* state. The footer says so, along with the de-energized fail state (shutter closed, diffuser in beam).
+
+## When the UIs diverge
+
+The standalone diagnostic page is hand-mirrored from `lco-instrument-web/diagnostic.js`. If a new command lands in the canonical registry, mirror it in `web/diagnostic.html`'s `COMMANDS` array. The server side is the source of truth for what's actually implemented — keep `ws/commands.py` aligned with all three UIs.
+
+`web/mechanisms.html` is deliberately *not* mirrored from the canonical client: the canonical client covers what every ADC has, and these two mechanisms exist only here.

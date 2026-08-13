@@ -11,6 +11,6 @@ Lean reference for the WINERED ADC control stack. One topic per file.
 | [correction.md](correction.md) | The IB dispersion-correction math, one page |
 | [running.md](running.md) | How to start the server: real / sim / mixed, env vars, ports |
 | [testing.md](testing.md) | `uv run pytest`, plus bench and on-instrument steps |
-| [diagnostic.md](diagnostic.md) | How to drive the server from a browser (canonical client + standalone page) |
+| [diagnostic.md](diagnostic.md) | How to drive the server from a browser (canonical client, standalone diagnostic, mechanisms panel) |
 
 Plans (committed before execution) live under [`plans/`](plans/). Vendor datasheets live under [`references/`](references/).

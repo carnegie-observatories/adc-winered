@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WINERED ADC — shutter &amp; milky flat</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ok:    #2e9e4f;
+    --warn:  #d08214;
+    --bad:   #d33a3a;
+    --muted: #8888;
+    --line:  #8884;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    margin: 0 auto; padding: 16px; max-width: 720px;
+  }
+  h1 { font-size: 17px; margin: 0 0 12px; }
+  h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase;
+       letter-spacing: 0.06em; color: #888; }
+
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+              margin-bottom: 14px; font-size: 13px; }
+  .controls input { font: inherit; padding: 4px 8px; border: 1px solid var(--line);
+                    border-radius: 4px; background: transparent; color: inherit; }
+  .controls button { font: inherit; padding: 5px 12px; border: 0; border-radius: 4px;
+                     background: #2563eb; color: #fff; cursor: pointer; }
+  .pill { padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--muted); color: #fff; }
+  .pill.ok  { background: var(--ok); }
+  .pill.bad { background: var(--bad); }
+
+  .banner { display: none; padding: 10px 12px; border-radius: 6px; margin-bottom: 14px;
+            font-size: 13px; line-height: 1.45; border: 1px solid var(--bad);
+            background: color-mix(in srgb, var(--bad) 12%, transparent); }
+  .banner.show { display: block; }
+
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  .state { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .dot { width: 15px; height: 15px; border-radius: 50%; background: var(--muted);
+         border: 1px solid #0003; flex: none; }
+  .dot.on   { background: var(--ok); }
+  .dot.warn { background: var(--warn); }
+  .value { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .value.unknown { color: #888; font-weight: 400; }
+  .sub { font-size: 12px; color: #888; margin-left: auto; text-align: right; }
+
+  .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .buttons button {
+    font: inherit; font-size: 15px; padding: 11px 18px; min-width: 9.5em;
+    border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+    background: transparent; color: inherit;
+  }
+  .buttons button:hover:not(:disabled) { border-color: #2563eb; }
+  .buttons button.active { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 600; }
+  .buttons button.pending { border-color: var(--warn); border-style: dashed; }
+  .buttons button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .note { font-size: 12px; color: #888; line-height: 1.5; margin-top: 4px; }
+  .err { font-size: 12.5px; color: var(--bad); min-height: 1.3em; margin-top: 10px; }
+  footer { font-size: 12px; color: #888; line-height: 1.55; border-top: 1px solid var(--line);
+           padding-top: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<h1>WINERED ADC — shutter &amp; milky flat</h1>
+
+<div class="controls">
+  <label for="host">ws://</label>
+  <input id="host" value="localhost" size="13">
+  <label for="port">:</label>
+  <input id="port" value="52403" size="5">
+  <button id="connect">Connect</button>
+  <span id="conn" class="pill">disconnected</span>
+</div>
+
+<div id="banner" class="banner"></div>
+
+<div class="card" id="card-shutter">
+  <h2>Shutter</h2>
+  <div class="state">
+    <span class="dot" id="dot-shutter"></span>
+    <span class="value unknown" id="val-shutter">unknown</span>
+    <span class="sub" id="sub-shutter"></span>
+  </div>
+  <div class="buttons">
+    <button data-mech="shutter" data-pos="open">Open</button>
+    <button data-mech="shutter" data-pos="closed">Close</button>
+  </div>
+</div>
+
+<div class="card" id="card-milky">
+  <h2>Milky flat diffuser</h2>
+  <div class="state">
+    <span class="dot" id="dot-milky"></span>
+    <span class="value unknown" id="val-milky">unknown</span>
+    <span class="sub" id="sub-milky"></span>
+  </div>
+  <div class="buttons">
+    <button data-mech="milky_flat" data-pos="in">Insert</button>
+    <button data-mech="milky_flat" data-pos="out">Retract</button>
+  </div>
+</div>
+
+<div class="err" id="err"></div>
+
+<footer>
+  Neither mechanism has a position sensor — the PLC echoes back the commanded
+  state, so what you see is intent, not a measurement. Both EL2084 channels are
+  wired inverted: a de-energized rack (PLC stopped, sim mode, power loss) leaves
+  the shutter <strong>closed</strong> and the diffuser <strong>in the beam</strong>.
+</footer>
+
+<script type="module">
+// Dedicated control page for the two WINERED-only mechanisms. Everything
+// else about the ADC (rotators, slides, tracking) lives in the canonical
+// client — this page deliberately shows nothing but the shutter and the
+// milky-flat diffuser, so it can be left open on a bench display.
+//
+// Speaks the same WS protocol as the rest of the stack: subscribe to the
+// `mechanisms` topic, drive `set_shutter` / `set_milky_flat`. No build
+// step, no dependencies — open the file directly or serve it statically.
+
+const MECHS = {
+  shutter: {
+    positions: ["open", "closed"],
+    cmd: "set_shutter",
+    label: { open: "Open", closed: "Closed" },
+    // Which position lights the dot green: the one that blocks light.
+    lit: "closed",
+    dot: "dot-shutter", value: "val-shutter", sub: "sub-shutter",
+  },
+  milky_flat: {
+    positions: ["in", "out"],
+    cmd: "set_milky_flat",
+    label: { in: "In beam", out: "Retracted" },
+    lit: "in",
+    dot: "dot-milky", value: "val-milky", sub: "sub-milky",
+  },
+};
+
+const CONFIRM_TIMEOUT_MS = 6000;
+
+const $ = (id) => document.getElementById(id);
+const q = new URL(location.href).searchParams;
+if (q.get("host")) $("host").value = q.get("host");
+if (q.get("port")) $("port").value = q.get("port");
+
+let ws = null;
+let cmdId = 1;
+let reconnectAt = 0;           // backoff delay in ms; 0 = no retry scheduled
+const state = { shutter: null, milky_flat: null };
+const pending = { shutter: null, milky_flat: null };   // {pos, timer}
+
+// --- rendering --------------------------------------------------------
+
+const setConn = (text, cls) => {
+  const el = $("conn");
+  el.textContent = text;
+  el.className = "pill" + (cls ? " " + cls : "");
+};
+
+const setBanner = (html) => {
+  const el = $("banner");
+  el.innerHTML = html || "";
+  el.classList.toggle("show", Boolean(html));
+};
+
+const setError = (text) => { $("err").textContent = text || ""; };
+
+const render = () => {
+  const live = ws && ws.readyState === WebSocket.OPEN;
+  for (const [mech, spec] of Object.entries(MECHS)) {
+    const cur = state[mech];
+    const pend = pending[mech];
+
+    const valEl = $(spec.value);
+    valEl.textContent = cur ? (spec.label[cur] || cur) : "unknown";
+    valEl.classList.toggle("unknown", !cur);
+
+    const dot = $(spec.dot);
+    dot.classList.toggle("on", cur === spec.lit);
+    dot.classList.toggle("warn", Boolean(pend));
+
+    $(spec.sub).textContent = pend ? `commanding ${spec.label[pend.pos] || pend.pos}…` : "";
+
+    for (const btn of document.querySelectorAll(`button[data-mech="${mech}"]`)) {
+      const pos = btn.dataset.pos;
+      btn.classList.toggle("active", cur === pos && !pend);
+      btn.classList.toggle("pending", Boolean(pend) && pend.pos === pos);
+      btn.disabled = !live;
+    }
+  }
+};
+
+// --- protocol ---------------------------------------------------------
+
+const send = (obj) => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { setError("not connected"); return false; }
+  ws.send(JSON.stringify(obj));
+  return true;
+};
+
+const clearPending = (mech) => {
+  if (pending[mech]) clearTimeout(pending[mech].timer);
+  pending[mech] = null;
+};
+
+const command = (mech, pos) => {
+  const spec = MECHS[mech];
+  setError("");
+  const id = "c" + (cmdId++);
+  if (!send({ type: "cmd", id, name: spec.cmd, args: { pos } })) return;
+  clearPending(mech);
+  pending[mech] = {
+    pos,
+    // The server has no feedback sensor to wait on, but it does echo the
+    // command back on the `mechanisms` topic. If that echo never arrives,
+    // say so rather than leaving the button dashed forever.
+    timer: setTimeout(() => {
+      pending[mech] = null;
+      setError(`No state confirmation for ${spec.cmd} after ${CONFIRM_TIMEOUT_MS / 1000}s.`);
+      render();
+    }, CONFIRM_TIMEOUT_MS),
+  };
+  render();
+};
+
+for (const btn of document.querySelectorAll("button[data-mech]")) {
+  btn.addEventListener("click", () => command(btn.dataset.mech, btn.dataset.pos));
+}
+
+const onState = (data) => {
+  if (!data || typeof data !== "object") return;
+  for (const mech of Object.keys(MECHS)) {
+    const next = data[mech];
+    if (typeof next !== "string") continue;
+    state[mech] = next;
+    if (pending[mech] && pending[mech].pos === next) clearPending(mech);
+  }
+  render();
+};
+
+const connect = () => {
+  // Detach the old socket's handlers before closing it. Without this, its
+  // onclose fires after the new socket is already up and schedules a
+  // reconnect that tears the new one down again — a churn loop every time
+  // Connect is clicked.
+  if (ws) {
+    ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+    try { ws.close(); } catch { /* already closing */ }
+  }
+  const host = $("host").value.trim();
+  const port = $("port").value.trim();
+  setConn("connecting…");
+  setError("");
+  try {
+    ws = new WebSocket(`ws://${host}:${port}/`);
+  } catch (e) {
+    setConn("bad address", "bad");
+    setError(String(e));
+    return;
+  }
+
+  ws.onopen = () => {
+    setConn("connected", "ok");
+    reconnectAt = 0;
+    send({ type: "subscribe", topics: ["mechanisms"] });
+    render();
+  };
+
+  ws.onmessage = (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+
+    if (msg.type === "hello") {
+      const topics = Array.isArray(msg.topics) ? msg.topics : [];
+      if (!topics.includes("mechanisms")) {
+        // Guard against pointing this page at a non-WINERED ADC: the app
+        // tag and port are identical, so the only honest signal is whether
+        // the server advertises the topic.
+        setBanner(
+          `Connected to <strong>${msg.app || "an ADC server"}</strong>, but it does not ` +
+          `advertise the <code>mechanisms</code> topic — no shutter or milky-flat ` +
+          `diffuser on this instrument. Controls disabled.`
+        );
+        for (const btn of document.querySelectorAll("button[data-mech]")) btn.disabled = true;
+      } else {
+        setBanner("");
+      }
+      return;
+    }
+
+    if (msg.type === "state" && msg.topic === "mechanisms") { onState(msg.data); return; }
+
+    if (msg.type === "ack" && msg.ok === false) {
+      const err = msg.error || {};
+      setError(`${err.code || "error"}: ${err.message || "command rejected"}`);
+      for (const mech of Object.keys(MECHS)) clearPending(mech);
+      render();
+    }
+  };
+
+  ws.onerror = () => { setConn("error", "bad"); };
+
+  ws.onclose = (ev) => {
+    setConn(`closed (${ev.code}) — retrying`, "bad");
+    for (const mech of Object.keys(MECHS)) clearPending(mech);
+    render();
+    // Bench displays get left open for hours; retry with a capped backoff
+    // so a server restart doesn't require touching the page.
+    reconnectAt = Math.min(reconnectAt ? reconnectAt * 2 : 1000, 15000);
+    setTimeout(connect, reconnectAt);
+  };
+};
+
+$("connect").addEventListener("click", () => { reconnectAt = 0; connect(); });
+
+render();
+connect();
+</script>
+
+</body>
+</html>
