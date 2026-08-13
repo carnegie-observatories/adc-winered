@@ -13,6 +13,23 @@ http://wr-pi:52403/
 The point is milky flats: taking them over the usual web interface on a bench
 that has the two mechanisms but no Beckhoff rack.
 
+## Reaching it
+
+`wr-pi` is an SSH alias, not a DNS name — a browser needs the address:
+
+```
+http://10.8.96.62:52403/          # on the LCO network / VPN
+```
+
+From anywhere that only has SSH to the Pi (e.g. through `officevpn`), forward
+the port and use localhost — the panel connects back through the same tunnel,
+since it targets the host it was served from:
+
+```sh
+ssh -N -L 52403:127.0.0.1:52403 wr-pi
+# then: http://localhost:52403/
+```
+
 ## What it exposes
 
 | | |

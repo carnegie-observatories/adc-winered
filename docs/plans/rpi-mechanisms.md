@@ -113,7 +113,9 @@ Re-running is the upgrade path.
    `web/mechanisms.html`, tests for both routes.
 3. **Deploy and verify on `wr-pi`.** Deploy, then check the service, the page
    over HTTP, a `set_*` round-trip over WS, and the pin levels with `pinctrl`
-   — the one check that proves the relays actually moved.
+   — the one check that proves the relays actually moved. *(done: D26 high from
+   startup, D6 and D13 following `set_shutter` / `set_milky_flat`, service
+   enabled and surviving restart)*
 
 ## Verification
 
