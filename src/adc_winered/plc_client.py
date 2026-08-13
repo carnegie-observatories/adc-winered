@@ -80,17 +80,39 @@ _HEARTBEAT = "GVL_State.bHeartbeat"
 class PlcClient:
     """Real PLC backend over Beckhoff ADS."""
 
-    def __init__(self, ams_net_id: str, ams_port: int = 851, ip: str | None = None) -> None:
+    def __init__(
+        self,
+        ams_net_id: str,
+        ams_port: int = 851,
+        host: str | None = None,
+        local_ams_net_id: str | None = None,
+    ) -> None:
+        """`host` is where the TCP connection goes; `ams_net_id` is who we ask
+        for once connected. They are independent — this PLC answers to
+        5.171.247.155.1.1 while living at 10.7.45.150 — and pyads defaults
+        `host` to the Net ID's first four octets, which is wrong both there and
+        through an SSH tunnel. Pass it explicitly.
+
+        `local_ams_net_id` is our own AMS Net ID; the PLC accepts the session
+        only if it has a route matching it (see docs/bring-up.md).
+        """
         self._ams_net_id = ams_net_id
         self._ams_port = ams_port
-        self._ip = ip
+        self._host = host
+        self._local_ams_net_id = local_ams_net_id
         self._plc: pyads.Connection | None = None
 
     async def connect(self) -> None:
         def _open() -> pyads.Connection:
-            if self._ip:
-                pyads.set_local_address(self._ip)
-            conn = pyads.Connection(self._ams_net_id, self._ams_port)
+            if self._local_ams_net_id:
+                # Despite the "Linux only" docstring, this works on macOS too
+                # (verified against pyads 3.5.2 / adslib on Darwin arm64).
+                pyads.open_port()
+                pyads.set_local_address(self._local_ams_net_id)
+                pyads.close_port()
+            conn = pyads.Connection(
+                self._ams_net_id, self._ams_port, ip_address=self._host or None
+            )
             conn.open()
             return conn
 

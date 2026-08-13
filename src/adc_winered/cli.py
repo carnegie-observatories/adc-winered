@@ -100,7 +100,12 @@ def _make_plc(s: Settings) -> PlcDriver:
         if not s.plc_ams_net_id:
             log.error("ADC_PLC_AMS_NET_ID is required when ADC_PLC_MODE=real")
             sys.exit(2)
-        return PlcClient(ams_net_id=s.plc_ams_net_id, ams_port=s.plc_ams_port, ip=s.plc_ip or None)
+        return PlcClient(
+            ams_net_id=s.plc_ams_net_id,
+            ams_port=s.plc_ams_port,
+            host=s.plc_host or None,
+            local_ams_net_id=s.plc_local_ams_net_id or None,
+        )
     return PlcSim(rotator_velocity_deg_s=s.rotator_velocity_deg_s, slide_settle_s=s.slide_settle_s)
 
 

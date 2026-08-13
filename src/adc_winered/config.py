@@ -2,8 +2,15 @@
 
 Example:
 
-    ADC_PLC_MODE=real ADC_PLC_AMS_NET_ID=10.8.104.50.1.1 \
+    ADC_PLC_MODE=real ADC_PLC_AMS_NET_ID=5.171.247.155.1.1 \
     ADC_TCS_MODE=real ADC_TCS_HOST=mag2tcs \
+    uv run adc-winered serve
+
+Over an SSH tunnel (`ssh -N -L 48898:127.0.0.1:48898 adc-plc`), point the TCP
+side at the tunnel and use a local Net ID the PLC has a route for:
+
+    ADC_PLC_MODE=real ADC_PLC_AMS_NET_ID=5.171.247.155.1.1 \
+    ADC_PLC_HOST=127.0.0.1 ADC_PLC_LOCAL_AMS_NET_ID=127.0.0.1.1.1 \
     uv run adc-winered serve
 """
 
@@ -25,9 +32,20 @@ class Settings(BaseSettings):
     tcs_mode: Mode = "sim"
 
     # Real-PLC connection.
+    #
+    # Three distinct things, easy to conflate:
+    #   plc_ams_net_id     — the PLC's AMS Net ID. NOT necessarily derived from
+    #                        its IP: the WINERED CX reports 5.171.247.155.1.1
+    #                        while living at 10.7.45.150.
+    #   plc_host           — where to open the TCP connection. Defaults to the
+    #                        first four octets of the Net ID (pyads' behaviour),
+    #                        which is wrong whenever the two differ, and for an
+    #                        SSH tunnel (set it to 127.0.0.1).
+    #   plc_local_ams_net_id — *our* AMS Net ID. The PLC needs a matching route.
     plc_ams_net_id: str = ""
     plc_ams_port: int = 851
-    plc_ip: str = ""
+    plc_host: str = ""
+    plc_local_ams_net_id: str = ""
 
     # Real-TCS connection.
     tcs_host: str = "127.0.0.1"
