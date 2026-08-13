@@ -35,10 +35,11 @@ class Settings:
     pin_milky_flat: int = DEFAULT_PIN_MILKY_FLAT
 
     # Relay-board polarity: does driving the GPIO *high* energize the relay?
-    # Most opto-isolated relay HATs are active-low; a bare transistor driver is
-    # active-high. Getting this wrong inverts everything, including the state
-    # the pins rest in while the service is stopped.
-    active_high: bool = True
+    # False on the wr-pi board, measured on the bench — driving D26 high left
+    # the 12 V enable off. Opto-isolated relay boards are active-low as a rule;
+    # a bare transistor driver would be active-high. Getting this wrong inverts
+    # everything, silently.
+    active_high: bool = False
 
     # Mechanical polarity: which position the mechanism sits in while its relay
     # is energized. The other position is therefore the powered-down state —
@@ -58,7 +59,7 @@ def load(env: dict[str, str] | None = None) -> Settings:
         pin_enable=_int(e, "WR_PIN_ENABLE", DEFAULT_PIN_ENABLE),
         pin_shutter=_int(e, "WR_PIN_SHUTTER", DEFAULT_PIN_SHUTTER),
         pin_milky_flat=_int(e, "WR_PIN_MILKY_FLAT", DEFAULT_PIN_MILKY_FLAT),
-        active_high=_bool(e, "WR_ACTIVE_HIGH", True),
+        active_high=_bool(e, "WR_ACTIVE_HIGH", False),
         shutter_energized_pos=_choice(
             e, "WR_SHUTTER_ENERGIZED_POS", "open", ("open", "closed")
         ),

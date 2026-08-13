@@ -74,8 +74,9 @@ Two independent polarities, both configurable, because both are physical facts
 of the bench rather than something the code can discover:
 
 - **`WR_ACTIVE_HIGH`** — electrical. True when driving a GPIO *high* energizes
-  the relay. Opto-isolated relay HATs are typically active-**low**; set it
-  `false` for those, or every state below is inverted.
+  the relay. **False on `wr-pi`**, and that is the default: driving D26 high
+  left the 12 V enable off, so the board is active-low, as opto-isolated relay
+  boards usually are. Energized therefore reads as a *low* pin.
 - **`WR_SHUTTER_ENERGIZED_POS` / `WR_MILKY_FLAT_ENERGIZED_POS`** — mechanical.
   Which position each mechanism holds while its relay is energized. Defaults
   are `open` and `in`, i.e. energizing the relay opens the shutter and inserts
@@ -90,6 +91,14 @@ to whatever the unpowered actuators rest in. With the default polarity that
 reads as shutter *closed*, diffuser *out*. Note this differs from the PLC rack,
 whose EL2084 channels are wired inverted and rest at shutter closed, diffuser
 *in beam*. A service restart briefly drops the enable line too.
+
+This survives the process going away entirely, which is not automatic on an
+active-low board: when the pins are released they revert to inputs, and on
+`wr-pi` they then read **high** — de-energized — because the relay board pulls
+them up. Measured with the service stopped (`pinctrl get 6,13,26` → `ip pn |
+hi` on all three). Worth re-checking if the relay board is ever swapped: a
+board without that pull-up would energize everything the moment the service
+stopped.
 
 ## Deploy
 

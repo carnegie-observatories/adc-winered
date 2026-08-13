@@ -269,6 +269,15 @@ def test_default_polarity_matches_the_wiring_notes() -> None:
     assert mechanisms.snapshot() == {"shutter": "closed", "milky_flat": "out"}
 
 
+def test_default_relay_board_is_active_low() -> None:
+    """Measured on wr-pi: driving D26 high left the 12 V enable off.
+
+    Pinned here so flipping it back is a deliberate act, not a merge accident —
+    nothing else in the stack would notice the inversion.
+    """
+    assert Settings().active_high is False
+
+
 def test_unknown_position_raises_before_any_write() -> None:
     relays = SimRelays(SIM)
     mechanisms = Mechanisms(relays, SIM)

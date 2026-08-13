@@ -129,9 +129,11 @@ only thing the software can be wrong about *silently*, and it is the one thing
 
 ## Risks
 
-- **Polarity.** Both knobs default to a guess (`active_high=true`, energized =
-  shutter open / diffuser in). Wrong values are silent — no sensor contradicts
-  them. Confirm by eye on the bench before an observing run.
+- **Polarity.** Both knobs started as guesses, and the electrical one was
+  wrong: the board is active-**low**, caught on the bench because D26 high left
+  the 12 V enable dark. `active_high` now defaults to false. The mechanical
+  guess (energized = shutter open / diffuser in) still has to be confirmed by
+  eye — no sensor contradicts it.
 - **Restart drops 12 V.** Stop, restart, or power loss de-energizes enable, so
   the mechanisms fall back to their unpowered rest positions. Deliberate: a
   stopped service should not leave a latched bench. Note this differs from the
