@@ -11,6 +11,10 @@
 //   Term 2 (EL2002) — 2-ch DO; ch.1 = Deploy B, ch.2 = Deploy A
 //   Term 3 (EL1084) — 4-ch DI; ch.1 = Sense B OUT, ch.2 = Sense B IN,
 //                              ch.3 = Sense A OUT, ch.4 = Sense A IN
+//   Term 7 (EK1200) — second coupler segment
+//   Term 13 (EL2084) — 4-ch DO (negative-switching);
+//                              ch.1 = Shutter   (energized = OPEN)
+//                              ch.2 = Milky flat (energized = RETRACTED)
 //
 // Syntax note: the AT %I* (input) or AT %Q* (output) address is REQUIRED
 // for TcLinkTo to actually map the variable into the process image. The *
@@ -40,6 +44,16 @@ VAR_GLOBAL
 
     {attribute 'TcLinkTo' := 'TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 3 (EL1084)^Channel 1^Input'}
     bSlideB_LimitOut AT %I* : BOOL;
+
+    // --- Shutter & milky-flat diffuser: EL2084 on the second coupler ----
+    // EL2084 is the NEGATIVE-switching 4-ch DO variant (switches 0 V, not
+    // +24 V) — verify actuator wiring/polarity on the bench before relying
+    // on TRUE = energized.
+    {attribute 'TcLinkTo' := 'TIID^Device 1 (EtherCAT)^Term 7 (EK1200)^Term 13 (EL2084)^Channel 1^Output'}
+    bShutter_Out AT %Q* : BOOL;
+
+    {attribute 'TcLinkTo' := 'TIID^Device 1 (EtherCAT)^Term 7 (EK1200)^Term 13 (EL2084)^Channel 2^Output'}
+    bMilkyFlat_Out AT %Q* : BOOL;
 
     // Rotator axes (EL7342 channels) are bound via the NC axis configuration,
     // not via GVL_IO. See docs/bring-up.md § 3.

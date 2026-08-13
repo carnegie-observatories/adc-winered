@@ -150,6 +150,28 @@ ELSE
     GVL_IO.bSlideB_DeployOut := fbSlideB.bSolenoid;
 END_IF
 
+// --- Shutter ----------------------------------------------------------
+// Plain DO, no position feedback. Energizing EL2084 ch.1 OPENS the
+// shutter, so bShutter_Closed = TRUE drives the output FALSE. State
+// echoes the command; in sim the real output stays de-energized (same
+// convention as the slides).
+IF GVL_Cfg.bSimulate THEN
+    GVL_IO.bShutter_Out := FALSE;
+ELSE
+    GVL_IO.bShutter_Out := NOT GVL_Cmd.bShutter_Closed;
+END_IF
+GVL_State.bShutter_Closed := GVL_Cmd.bShutter_Closed;
+
+// --- Milky-flat diffuser ----------------------------------------------
+// Reversed wiring: energizing EL2084 ch.2 RETRACTS the diffuser, so
+// deploy = output de-energized. In sim the real output still stays FALSE.
+IF GVL_Cfg.bSimulate THEN
+    GVL_IO.bMilkyFlat_Out := FALSE;
+ELSE
+    GVL_IO.bMilkyFlat_Out := NOT GVL_Cmd.bMilkyFlat_Deploy;
+END_IF
+GVL_State.bMilkyFlat_Deployed := GVL_Cmd.bMilkyFlat_Deploy;
+
 // Heartbeat — flipped here so Python sees it tick every cycle.
 GVL_State.bHeartbeat := NOT GVL_State.bHeartbeat;
 ]]></ST>

@@ -24,6 +24,10 @@ VAR_GLOBAL
     bSlideA_Deploy : BOOL;
     bSlideB_Deploy : BOOL;
 
+    // Shutter & milky-flat diffuser (level-triggered)
+    bShutter_Closed   : BOOL;  // TRUE = shutter closed (= EL2084 ch.1 DE-energized)
+    bMilkyFlat_Deploy : BOOL;  // TRUE = diffuser in beam (= EL2084 ch.2 DE-energized; wiring is reversed)
+
 END_VAR
 ]]></Declaration>
   </GVL>

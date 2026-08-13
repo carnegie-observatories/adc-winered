@@ -26,6 +26,11 @@ VAR_GLOBAL
     eSlideA : E_SlideState;
     eSlideB : E_SlideState;
 
+    // Shutter & milky-flat diffuser. No position feedback on either — these
+    // echo the commanded state, not a measured one.
+    bShutter_Closed     : BOOL;
+    bMilkyFlat_Deployed : BOOL;
+
     // Heartbeat: toggled every cycle by MAIN. Python uses it for liveness.
     bHeartbeat : BOOL;
 

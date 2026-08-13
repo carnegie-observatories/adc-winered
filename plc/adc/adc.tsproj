@@ -1424,7 +1424,7 @@ External Setpoint Generation:
 			</Relations>
 		</DataType>
 		<DataType>
-			<Name GUID="{18071995-0000-0000-0000-002000000001}" IecBaseType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..0] OF BIT</Name>
+			<Name GUID="{18071995-0000-0000-0000-002000000001}" IecBaseType="true" BitType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..0] OF BIT</Name>
 			<BitSize>1</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000010}">BIT</BaseType>
 			<ArrayInfo>
@@ -1433,7 +1433,7 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{18071995-0000-0000-0000-002000000002}" IecBaseType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..1] OF BIT</Name>
+			<Name GUID="{18071995-0000-0000-0000-002000000002}" IecBaseType="true" BitType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..1] OF BIT</Name>
 			<BitSize>2</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000010}">BIT</BaseType>
 			<ArrayInfo>
@@ -1442,7 +1442,7 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{18071995-0000-0000-0000-002000000003}" IecBaseType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..2] OF BIT</Name>
+			<Name GUID="{18071995-0000-0000-0000-002000000003}" IecBaseType="true" BitType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..2] OF BIT</Name>
 			<BitSize>3</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000010}">BIT</BaseType>
 			<ArrayInfo>
@@ -1460,7 +1460,7 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{18071995-0000-0000-0000-002000000004}" IecBaseType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..3] OF BIT</Name>
+			<Name GUID="{18071995-0000-0000-0000-002000000004}" IecBaseType="true" BitType="true" AutoDeleteType="true" HideSubItems="true">ARRAY [0..3] OF BIT</Name>
 			<BitSize>4</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000010}">BIT</BaseType>
 			<ArrayInfo>
@@ -1836,7 +1836,7 @@ External Setpoint Generation:
 		</Motion>
 		<Plc>
 			<Project GUID="{5ED92641-EECB-4860-B0A1-6BDEC06F637A}" Name="adc" PrjFilePath="adc\adc.plcproj" TmcFilePath="adc\adc.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{4350DD58-B1F5-1A50-B68E-F7DD093B8F8F}">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{E9CF7B89-DF87-B520-ACA0-BCF9AAAA5166}" TmcPath="adc\adc.tmc">
 					<Name>adc Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
@@ -1859,6 +1859,18 @@ External Setpoint Generation:
 							<Comment><![CDATA[ --- Slide B: Deploy B on EL2002 ch.1, limits on EL1084 ch.1/2 -----]]></Comment>
 							<Type>BOOL</Type>
 						</Var>
+						<Var>
+							<Name>GVL_IO.bShutter_Out</Name>
+							<Comment><![CDATA[ --- Shutter & milky-flat diffuser: EL2084 on the second coupler ----
+ EL2084 is the NEGATIVE-switching 4-ch DO variant (switches 0 V, not
+ +24 V) — verify actuator wiring/polarity on the bench before relying
+ on TRUE = energized.]]></Comment>
+							<Type>BOOL</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO.bMilkyFlat_Out</Name>
+							<Type>BOOL</Type>
+						</Var>
 					</Vars>
 					<Vars VarGrpType="1">
 						<Name>PlcTask Inputs</Name>
@@ -1871,6 +1883,10 @@ External Setpoint Generation:
 							<Type GUID="{25521FAA-EA5F-4C7F-8864-BBCCDACD2E98}" Namespace="MC">NCTOPLC_AXIS_REF</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO.bSlideA_LimitIn</Name>
+							<Type>BOOL</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO.bSlideA_LimitOut</Name>
 							<Type>BOOL</Type>
 						</Var>
@@ -1880,10 +1896,6 @@ External Setpoint Generation:
 						</Var>
 						<Var>
 							<Name>GVL_IO.bSlideB_LimitOut</Name>
-							<Type>BOOL</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO.bSlideA_LimitIn</Name>
 							<Type>BOOL</Type>
 						</Var>
 					</Vars>
@@ -1929,17 +1941,14 @@ External Setpoint Generation:
 				<Image Id="1" AddrType="9" ImageType="3">
 					<Name>Image</Name>
 				</Image>
-				<Image Id="4" AddrType="10" ImageType="3">
-					<Name>Image-2</Name>
-				</Image>
-				<Box Id="1" BoxType="9099">
-					<Name>Term 1 (EK1200)</Name>
+				<Box Id="7" BoxType="9099">
+					<Name>Term 7 (EK1200)</Name>
 					<ImageId>1000</ImageId>
 					<EtherCAT PdiType="#x0100" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x04b02c52" RevisionNo="#x00001388" InfoDataState="false" PortPhys="49" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EK1200-5000 EtherCAT Power supply (2A E-Bus)" Desc="EK1200" PortABoxInfo="#x00ffffff"/>
-					<Box Id="2" BoxType="9099">
-						<Name>Term 2 (EL2002)</Name>
+					<Box Id="8" BoxType="9099">
+						<Name>Term 8 (EL2002)</Name>
 						<ImageId>1001</ImageId>
-						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x07d23052" RevisionNo="#x00120000" BIC="1P026605SBTN999lwl2t1KEL2002                        Q1    2P512500170018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL2002 2Ch. Dig. Output 24V, 0.5A" Desc="EL2002" PortABoxInfo="#x01000001">
+						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x07d23052" RevisionNo="#x00120000" BIC="1P026605SBTN999lwl2t1KEL2002                        Q1    2P512500170018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL2002 2Ch. Dig. Output 24V, 0.5A" Desc="EL2002" PortABoxInfo="#x01000007">
 							<SyncMan>000f01004400010003000000000000000000000f44090000</SyncMan>
 							<Fmmu>0000000000000000000f00020100000001000000000000000000000000000000</Fmmu>
 							<Pdo Name="Channel 1" Index="#x1600" InOut="1" Flags="#x0011" SyncMan="0">
@@ -1954,10 +1963,10 @@ External Setpoint Generation:
 							</Pdo>
 						</EtherCAT>
 					</Box>
-					<Box Id="3" BoxType="9099">
-						<Name>Term 3 (EL1084)</Name>
+					<Box Id="9" BoxType="9099">
+						<Name>Term 9 (EL1084)</Name>
 						<ImageId>1002</ImageId>
-						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x043c3052" RevisionNo="#x00120000" BIC="1P049142SBTN9999jgwk1KEL1084                        Q1    2P312200140018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL1084 4Ch. Dig. Input 24V, 3ms, negative" Desc="EL1084" PortABoxInfo="#x01000002">
+						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x043c3052" RevisionNo="#x00120000" BIC="1P049142SBTN9999jgwk1KEL1084                        Q1    2P312200140018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL1084 4Ch. Dig. Input 24V, 3ms, negative" Desc="EL1084" PortABoxInfo="#x01000008">
 							<SyncMan>001001000000010004000000000000000100001000010000</SyncMan>
 							<Fmmu>0000000000000000001000010100000002000000000000000000000000000000</Fmmu>
 							<Pdo Name="Channel 1" Index="#x1a00" Flags="#x0011" SyncMan="0">
@@ -1982,10 +1991,10 @@ External Setpoint Generation:
 							</Pdo>
 						</EtherCAT>
 					</Box>
-					<Box Id="4" BoxType="9099" BoxFlags="#x00000020">
-						<Name>Term 4 (EL7342)</Name>
+					<Box Id="10" BoxType="9099" BoxFlags="#x00000020">
+						<Name>Term 10 (EL7342)</Name>
 						<ImageId>1003</ImageId>
-						<EtherCAT SlaveType="2" PdiType="#x0405" MboxDataLinkLayer="true" StateMBoxPolling="true" CycleMBoxPollingTime="0" CoeType="39" FoeType="1" VendorId="#x00000002" ProductCode="#x1cae3052" RevisionNo="#x00180000" BIC="1P067389SBTN999ks2at1KEL7342                        Q1    2P412512240024" InfoDataAddr="true" InfoDataSoeDS401="true" TimeoutMailbox2="2000" CheckRevisionNoType="3" PortPhys="51" SdoUploadWithMaxLength="true" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL7342 2Ch. DC motor output stage (50V, 3.5A)" Desc="EL7342" PortABoxInfo="#x01000003">
+						<EtherCAT SlaveType="2" PdiType="#x0405" MboxDataLinkLayer="true" StateMBoxPolling="true" CycleMBoxPollingTime="0" CoeType="39" FoeType="1" VendorId="#x00000002" ProductCode="#x1cae3052" RevisionNo="#x00180000" BIC="1P067389SBTN999ks2at1KEL7342                        Q1    2P412512240024" InfoDataAddr="true" InfoDataSoeDS401="true" TimeoutMailbox2="2000" CheckRevisionNoType="3" PortPhys="51" SdoUploadWithMaxLength="true" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL7342 2Ch. DC motor output stage (50V, 3.5A)" Desc="EL7342" PortABoxInfo="#x01000009">
 							<SyncMan>001080002600010001000000400080008000001026010000</SyncMan>
 							<SyncMan>801080002200010002000000400080008000801022010000</SyncMan>
 							<SyncMan>001110002400010003000000000000001000001124010000</SyncMan>
@@ -2734,10 +2743,10 @@ External Setpoint Generation:
 							<CoeProfile ProfileNo="46142345" DisplayName="Ch 2 - Positioning interface"/>
 						</EtherCAT>
 					</Box>
-					<Box Id="5" BoxType="9099">
-						<Name>Term 5 (EL9505)</Name>
+					<Box Id="11" BoxType="9099">
+						<Name>Term 11 (EL9505)</Name>
 						<ImageId>1004</ImageId>
-						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x25213052" RevisionNo="#x00120000" BIC="1P072028SBTN99aj0skb1KEL9505                        Q1    2P102601110018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9505 Power supply terminal 5V" Desc="EL9505" PortABoxInfo="#x01000004">
+						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x25213052" RevisionNo="#x00120000" BIC="1P072028SBTN99aj0skb1KEL9505                        Q1    2P102601110018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9505 Power supply terminal 5V" Desc="EL9505" PortABoxInfo="#x0100000a">
 							<SyncMan>001001000000010004000000000000000000001000000000</SyncMan>
 							<Fmmu>0000000000000000001000010100000002000000000000000000000000000000</Fmmu>
 							<Pdo Name="Status Uo" Index="#x1a00" Flags="#x0011" SyncMan="0">
@@ -2750,119 +2759,67 @@ External Setpoint Generation:
 							</Pdo>
 						</EtherCAT>
 					</Box>
-					<Box Id="6" BoxType="9099">
-						<Name>Term 6 (EL9011)</Name>
+					<Box Id="12" BoxType="9099">
+						<Name>Term 12 (EL9512)</Name>
+						<ImageId>1004</ImageId>
+						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x25283052" RevisionNo="#x00120000" BIC="1P072035SBTN99ai3kd91KEL9512                        Q1    2P502501110018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9512 Power supply terminal 12V" Desc="EL9512" PortABoxInfo="#x0100000b">
+							<SyncMan>001001000000010004000000000000000000001000000000</SyncMan>
+							<Fmmu>0000000000000000001000010100000002000000000000000000000000000000</Fmmu>
+							<Pdo Name="Status Uo" Index="#x1a00" Flags="#x0011" SyncMan="0">
+								<Entry Name="Power OK" Index="#x6000" Sub="#x01">
+									<Type>BIT</Type>
+								</Entry>
+								<Entry Name="Overload" Index="#x6000" Sub="#x02">
+									<Type>BIT</Type>
+								</Entry>
+							</Pdo>
+						</EtherCAT>
+					</Box>
+					<Box Id="13" BoxType="9099">
+						<Name>Term 13 (EL2084)</Name>
+						<ImageId>1001</ImageId>
+						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x08243052" RevisionNo="#x00120000" BIC="1P056757SBTN99aiw9lj1KEL2084                        Q1    2P102600080018" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL2084 4Ch. Dig. Output 24V, 0.5A, switching to negative" Desc="EL2084" PortABoxInfo="#x0100000c">
+							<SyncMan>000f01004400010003000000000000000000000f44090000</SyncMan>
+							<Fmmu>0000000000000000000f00020100000001000000000000000000000000000000</Fmmu>
+							<Pdo Name="Channel 1" Index="#x1600" InOut="1" Flags="#x0011" SyncMan="0">
+								<Entry Name="Output" Index="#x7000" Sub="#x01">
+									<Type>BIT</Type>
+								</Entry>
+							</Pdo>
+							<Pdo Name="Channel 2" Index="#x1601" InOut="1" Flags="#x0011" SyncMan="0">
+								<Entry Name="Output" Index="#x7010" Sub="#x01">
+									<Type>BIT</Type>
+								</Entry>
+							</Pdo>
+							<Pdo Name="Channel 3" Index="#x1602" InOut="1" Flags="#x0011" SyncMan="0">
+								<Entry Name="Output" Index="#x7020" Sub="#x01">
+									<Type>BIT</Type>
+								</Entry>
+							</Pdo>
+							<Pdo Name="Channel 4" Index="#x1603" InOut="1" Flags="#x0011" SyncMan="0">
+								<Entry Name="Output" Index="#x7030" Sub="#x01">
+									<Type>BIT</Type>
+								</Entry>
+							</Pdo>
+						</EtherCAT>
+					</Box>
+					<Box Id="14" BoxType="9099">
+						<Name>Term 14 (EL9011)</Name>
 						<ImageId>1005</ImageId>
-						<EtherCAT CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x23333050" InfoDataState="false" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9011 End Terminal" Desc="EL9011" PortABoxInfo="#x01000005"/>
+						<EtherCAT CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x23333050" InfoDataState="false" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9011 End Terminal" Desc="EL9011" PortABoxInfo="#x0100000d"/>
 					</Box>
 				</Box>
 				<EtherCAT/>
 			</Device>
 		</Io>
-		<SymbolWatch>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 4 (EL7342)^ENC Status compact Channel 1^Latch value</Variable>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 2 (EL2002)^Channel 1^Output</Variable>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 2 (EL2002)^Channel 2^Output</Variable>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 3 (EL1084)^Channel 1^Input</Variable>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 3 (EL1084)^Channel 2^Input</Variable>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 3 (EL1084)^Channel 3^Input</Variable>
-			<Variable>TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 3 (EL1084)^Channel 4^Input</Variable>
-		</SymbolWatch>
 	</Project>
 	<Mappings>
-		<MappingInfo Identifier="{00000000-2001-0850-0020-500841000403}" Id="#x02030030"/>
-		<MappingInfo Identifier="{00000000-0010-0304-3000-040310000403}" Id="#x02030010"/>
+		<MappingInfo Identifier="{00000000-2001-0850-0020-500810000403}" Id="#x02030010"/>
 		<MappingInfo Identifier="{05000010-2001-0850-3000-040300205008}" Id="#x02030020" Watchdog="14000000040000000400000004000000"/>
-		<OwnerA Name="TINC^NC-Task 1 SAF^Axes^Axis 1">
-			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 4 (EL7342)">
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Error" Size="1" OffsA="3"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Moving negative" Size="1" OffsA="5"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Moving positive" Size="1" OffsA="4"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Ready" Size="1" OffsA="1"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Ready to enable"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Torque reduced" Size="1" OffsA="6"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 1^Status^Warning" Size="1" OffsA="2"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 1^Status^Digital input 1" Size="1" OffsA="3"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 1^Status^Digital input 2" Size="1" OffsA="4"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 1^Status^Sync error" Size="1" OffsA="5"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 1^Status^TxPDO Toggle" Size="1" OffsA="7"/>
-				<Link VarA="Drive^Inputs^In^nState4" VarB="WcState^InputToggle" Size="1" OffsA="1"/>
-				<Link VarA="Drive^Inputs^In^nState4" VarB="WcState^WcState"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 1^Control^Enable"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 1^Control^Reduce torque" Size="1" OffsA="2"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 1^Control^Reset" Size="1" OffsA="1"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 1^Control^Threshold active" Size="1" OffsA="3"/>
-				<Link VarA="Drive^Outputs^Out^nDataOut2[0]" VarB="DCM Velocity Channel 1^Velocity"/>
-				<Link VarA="Enc^Inputs^In^nDataIn1[0]" VarB="ENC Status compact Channel 1^Counter value"/>
-				<Link VarA="Enc^Inputs^In^nDataIn2[0]" VarB="ENC Status compact Channel 1^Latch value"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 1^Status^Counter overflow" Size="1" OffsA="4"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 1^Status^Counter underflow" Size="1" OffsA="3"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 1^Status^Extrapolation stall" Size="1" OffsA="7"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 1^Status^Latch extern valid" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 1^Status^Set counter done" Size="1" OffsA="2"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 1^Status^Status of extern latch" Size="1" OffsA="4"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 1^Status^Status of input A"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 1^Status^Status of input B" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 1^Status^Sync error" Size="1" OffsA="5"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 1^Status^TxPDO Toggle" Size="1" OffsA="7"/>
-				<Link VarA="Enc^Inputs^In^nState4" VarB="WcState^InputToggle" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Inputs^In^nState4" VarB="WcState^WcState"/>
-				<Link VarA="Enc^Outputs^Out^nCtrl1" VarB="ENC Control compact Channel 1^Control^Enable latch extern on negative edge" Size="1" OffsA="3"/>
-				<Link VarA="Enc^Outputs^Out^nCtrl1" VarB="ENC Control compact Channel 1^Control^Enable latch extern on positive edge" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Outputs^Out^nCtrl1" VarB="ENC Control compact Channel 1^Control^Set counter" Size="1" OffsA="2"/>
-				<Link VarA="Enc^Outputs^Out^nDataOut1[0]" VarB="ENC Control compact Channel 1^Set counter value"/>
-			</OwnerB>
-		</OwnerA>
-		<OwnerA Name="TINC^NC-Task 1 SAF^Axes^Axis 2">
-			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 4 (EL7342)">
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Error" Size="1" OffsA="3"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Moving negative" Size="1" OffsA="5"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Moving positive" Size="1" OffsA="4"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Ready" Size="1" OffsA="1"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Ready to enable"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Torque reduced" Size="1" OffsA="6"/>
-				<Link VarA="Drive^Inputs^In^nState1" VarB="DCM Status Channel 2^Status^Warning" Size="1" OffsA="2"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 2^Status^Digital input 1" Size="1" OffsA="3"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 2^Status^Digital input 2" Size="1" OffsA="4"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 2^Status^Sync error" Size="1" OffsA="5"/>
-				<Link VarA="Drive^Inputs^In^nState2" VarB="DCM Status Channel 2^Status^TxPDO Toggle" Size="1" OffsA="7"/>
-				<Link VarA="Drive^Inputs^In^nState4" VarB="WcState^InputToggle" Size="1" OffsA="1"/>
-				<Link VarA="Drive^Inputs^In^nState4" VarB="WcState^WcState"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 2^Control^Enable"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 2^Control^Reduce torque" Size="1" OffsA="2"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 2^Control^Reset" Size="1" OffsA="1"/>
-				<Link VarA="Drive^Outputs^Out^nCtrl1" VarB="DCM Control Channel 2^Control^Threshold active" Size="1" OffsA="3"/>
-				<Link VarA="Drive^Outputs^Out^nDataOut2[0]" VarB="DCM Velocity Channel 2^Velocity"/>
-				<Link VarA="Enc^Inputs^In^nDataIn1[0]" VarB="ENC Status compact Channel 2^Counter value"/>
-				<Link VarA="Enc^Inputs^In^nDataIn2[0]" VarB="ENC Status compact Channel 2^Latch value"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 2^Status^Counter overflow" Size="1" OffsA="4"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 2^Status^Counter underflow" Size="1" OffsA="3"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 2^Status^Extrapolation stall" Size="1" OffsA="7"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 2^Status^Latch extern valid" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Inputs^In^nState1" VarB="ENC Status compact Channel 2^Status^Set counter done" Size="1" OffsA="2"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 2^Status^Status of extern latch" Size="1" OffsA="4"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 2^Status^Status of input A"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 2^Status^Status of input B" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 2^Status^Sync error" Size="1" OffsA="5"/>
-				<Link VarA="Enc^Inputs^In^nState2" VarB="ENC Status compact Channel 2^Status^TxPDO Toggle" Size="1" OffsA="7"/>
-				<Link VarA="Enc^Inputs^In^nState4" VarB="WcState^InputToggle" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Inputs^In^nState4" VarB="WcState^WcState"/>
-				<Link VarA="Enc^Outputs^Out^nCtrl1" VarB="ENC Control compact Channel 2^Control^Enable latch extern on negative edge" Size="1" OffsA="3"/>
-				<Link VarA="Enc^Outputs^Out^nCtrl1" VarB="ENC Control compact Channel 2^Control^Enable latch extern on positive edge" Size="1" OffsA="1"/>
-				<Link VarA="Enc^Outputs^Out^nCtrl1" VarB="ENC Control compact Channel 2^Control^Set counter" Size="1" OffsA="2"/>
-				<Link VarA="Enc^Outputs^Out^nDataOut1[0]" VarB="ENC Control compact Channel 2^Set counter value"/>
-			</OwnerB>
-		</OwnerA>
 		<OwnerA Name="TIPC^adc^adc Instance">
-			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 2 (EL2002)">
-				<Link VarA="PlcTask Outputs^GVL_IO.bSlideA_DeployOut" VarB="Channel 2^Output" AutoLink="true"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.bSlideB_DeployOut" VarB="Channel 1^Output" AutoLink="true"/>
-			</OwnerB>
-			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1200)^Term 3 (EL1084)">
-				<Link VarA="PlcTask Inputs^GVL_IO.bSlideA_LimitIn" VarB="Channel 4^Input" AutoLink="true"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.bSlideA_LimitOut" VarB="Channel 3^Input" AutoLink="true"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.bSlideB_LimitIn" VarB="Channel 2^Input" AutoLink="true"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.bSlideB_LimitOut" VarB="Channel 1^Input" AutoLink="true"/>
+			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 7 (EK1200)^Term 13 (EL2084)">
+				<Link VarA="PlcTask Outputs^GVL_IO.bMilkyFlat_Out" VarB="Channel 2^Output" AutoLink="true"/>
+				<Link VarA="PlcTask Outputs^GVL_IO.bShutter_Out" VarB="Channel 1^Output"/>
 			</OwnerB>
 			<OwnerB Name="TINC^NC-Task 1 SAF^Axes^Axis 1">
 				<Link VarA="PlcTask Inputs^MAIN.Axis_A_ref.NcToPlc" VarB="Outputs^ToPlc"/>
