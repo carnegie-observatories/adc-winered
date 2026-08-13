@@ -18,7 +18,11 @@ PROTOCOL_VERSION = 1
 # App name is uppercase to match the canonical client's APP_REGISTRY keys
 # (lco-instrument-web/diagnostic.js — keyed "ADC", "DCU", etc.).
 APP_NAME = "ADC"
-KNOWN_TOPICS = ("status", "lens", "telescope", "logs")
+# `mechanisms` is WINERED-specific (shutter + milky-flat diffuser). Other ADC
+# servers don't advertise it, which is how the web client decides whether to
+# offer the WINERED mechanisms panel — see instruments/adc/manifest.json in
+# lco-instrument-web.
+KNOWN_TOPICS = ("status", "lens", "telescope", "mechanisms", "logs")
 
 
 class ErrorCode(str, enum.Enum):

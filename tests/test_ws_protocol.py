@@ -62,7 +62,7 @@ async def test_hello_on_connect(stack) -> None:
         assert msg["type"] == "hello"
         assert msg["app"] == "ADC"  # matches lco-instrument-web APP_REGISTRY key
         assert msg["protocol_version"] == 1
-        assert set(msg["topics"]) == {"status", "lens", "telescope", "logs"}
+        assert set(msg["topics"]) == {"status", "lens", "telescope", "mechanisms", "logs"}
     finally:
         await ws.close()
 
@@ -165,13 +165,27 @@ async def test_status_topic_reflects_control_mode(stack) -> None:
         await ws.close()
 
 
-async def test_shutter_and_milky_flat_commands_reach_status_topic(stack) -> None:
+async def test_status_topic_stays_free_of_winered_only_mechanisms(stack) -> None:
+    """`status` is the surface shared with every other ADC server — the
+    WINERED-only mechanisms live on their own topic."""
     server, _, _ = stack
     ws = await _connect(server)
     try:
         await ws.recv()  # hello
         await ws.send(json.dumps({"type": "subscribe", "topics": ["status"]}))
-        initial = await _recv_until(ws, lambda p: p.get("type") == "state" and p.get("topic") == "status")
+        snap = await _recv_until(ws, lambda p: p.get("type") == "state" and p.get("topic") == "status")
+        assert set(snap["data"]) == {"adc", "other", "control", "update", "running"}
+    finally:
+        await ws.close()
+
+
+async def test_shutter_and_milky_flat_commands_reach_mechanisms_topic(stack) -> None:
+    server, _, _ = stack
+    ws = await _connect(server)
+    try:
+        await ws.recv()  # hello
+        await ws.send(json.dumps({"type": "subscribe", "topics": ["mechanisms"]}))
+        initial = await _recv_until(ws, lambda p: p.get("type") == "state" and p.get("topic") == "mechanisms")
         assert initial["data"]["shutter"] == "closed"
         assert initial["data"]["milky_flat"] == "in"
 
@@ -188,7 +202,7 @@ async def test_shutter_and_milky_flat_commands_reach_status_topic(stack) -> None
         updated = await _recv_until(
             ws,
             lambda p: p.get("type") == "state"
-                       and p.get("topic") == "status"
+                       and p.get("topic") == "mechanisms"
                        and p.get("data", {}).get("shutter") == "open"
                        and p.get("data", {}).get("milky_flat") == "out",
         )

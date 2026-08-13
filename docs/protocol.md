@@ -36,12 +36,15 @@ Ack (one per `cmd`, keyed by `id`):
 
 | Topic | Shape | Source |
 |---|---|---|
-| `status` | `{adc, other, shutter, milky_flat, control, update, running}` | controller + plc snapshot |
+| `status` | `{adc, other, control, update, running}` | controller + plc snapshot |
+| `mechanisms` | `{shutter, milky_flat}` | plc snapshot — **WINERED-only**, see below |
 | `lens` | `{lens_a:{encoder,target,moving}, lens_b:{...}}` | plc snapshot + computed targets |
 | `telescope` | `{elevation, rotator}` | tcs sample |
 | `logs` | `{entries: [...]}` on snapshot; `event` frames per live entry | log ring buffer |
 
 The exact projector code is in [`src/adc_winered/ws/topics.py`](../src/adc_winered/ws/topics.py); the log buffer is in [`src/adc_winered/ws/logs.py`](../src/adc_winered/ws/logs.py).
+
+`status`, `lens` and `telescope` are the surface every ADC server shares — the Cocoa app at `/Users/william/workspace/adc` included. The shutter and milky-flat diffuser exist only on the WINERED bench, so they get their own `mechanisms` topic instead of extra `status` keys. Advertising it in `hello.topics` is the capability signal the web client uses: `instruments/adc/manifest.json` gates the WINERED window on `requires_topic: mechanisms`, so the panel appears only when connected to this server. Keep that contract in mind before folding these keys back into `status`.
 
 ## Commands
 
