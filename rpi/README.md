@@ -30,6 +30,81 @@ ssh -N -L 52403:127.0.0.1:52403 wr-pi
 # then: http://localhost:52403/
 ```
 
+### Over Wi-Fi, with no cable
+
+The Pi also runs its own Wi-Fi access point, so it can be used at the
+instrument with nothing plugged into its Ethernet port:
+
+| | |
+|---|---|
+| Network (SSID) | `wr_mech` |
+| Password | WPA2; ask the instrument team (not kept in this repo) |
+| Panel | `http://10.8.96.62:52403/` — the same URL as on the wire |
+| Fallback | `http://192.168.52.1:52403/` |
+
+Join `wr_mech` from a laptop or phone and open the panel. The device gets an
+address in `192.168.52.10–100` from the Pi.
+
+**Local only.** The network reaches the Pi and nothing else: there is no
+internet and no LCO network behind it, and no DNS server, so expect the device
+to report "no internet connection" and stay joined anyway. The Pi does not
+route between Wi-Fi and Ethernet (`net.ipv4.ip_forward` stays `0`), even with
+the cable plugged in.
+
+**Why the wired address works over Wi-Fi.** The Pi carries `10.8.96.62` on
+the Wi-Fi interface as well (a `/32` alongside `192.168.52.1/24`), and DHCP
+hands out the Pi as the default gateway. Requests for `10.8.96.62` therefore go
+to the Pi, which answers them because the address is its own. This still works
+with no cable, when the Ethernet port has no address. The panel opens its
+WebSocket back to whichever host it was loaded from, so either URL works.
+
+**If `10.8.96.62` doesn't load on a phone**, use `http://192.168.52.1:52403/`.
+Phones on a Wi-Fi network with no internet often keep mobile data as the
+default route, so traffic for any address outside the Wi-Fi subnet (and
+`10.8.96.62` is outside it) goes over mobile data. Turning mobile data off
+fixes that too. A laptop with only the Wi-Fi up has no such problem.
+
+The access point is always on, whether or not the cable is in. SSH works over
+it too (`ssh pi@192.168.52.1`), so anyone with the Wi-Fi password can reach the
+Pi's login prompt.
+
+It is set up by [`deploy/wifi-ap.sh`](deploy/wifi-ap.sh), which runs once on
+the Pi and is safe to re-run (see [Deploy](#deploy)). Its parts:
+
+- NetworkManager connection `wr_mech`: AP mode on `wlan0`, 2.4 GHz channel 6,
+  WPA2-PSK, method `manual` with `192.168.52.1/24` + `10.8.96.62/32`, IPv6
+  off. It is deliberately not NetworkManager's `shared` method, because that
+  method turns on IP forwarding and NAT to the Ethernet side.
+- `wr-mech-dhcp.service` runs a dnsmasq instance that does DHCP only
+  (`--port=0` turns off DNS), bound to `wlan0`. Leases are in
+  `/var/lib/misc/wr-mech-dhcp.leases`.
+- The Wi-Fi radio is switched on (`nmcli radio wifi on`). Raspberry Pi OS ships
+  with it off, and NetworkManager remembers the setting across reboots. The
+  regulatory country (`CL`) comes from the kernel command line.
+
+**Booting with no cable.** The wired address is set by the kernel itself
+(`ip=10.8.96.62::…` in `/boot/firmware/cmdline.txt`), and by default the
+kernel then waits up to 120 s for an Ethernet link ("Waiting up to 100 more
+seconds for network"). That would hold the access point back for two minutes
+on every cable-less boot, so `carrier_timeout=5` is added to the same line. A
+plugged-in cable gets a link well within 5 s. The original file is kept as
+`cmdline.txt.bak-pre-carrier-timeout`. This is a one-off edit on the Pi, not
+something `wifi-ap.sh` does. `cmdline.txt` must stay a single line.
+
+To check on it, or to switch it off:
+
+```sh
+ssh wr-pi 'nmcli -f GENERAL.STATE,IP4.ADDRESS device show wlan0'
+ssh wr-pi 'journalctl -u wr-mech-dhcp -f'      # who joined, which address
+ssh wr-pi 'sudo nmcli connection down wr_mech'  # off until next boot
+ssh wr-pi 'sudo nmcli connection delete wr_mech && sudo systemctl disable --now wr-mech-dhcp'  # off for good
+```
+
+The script prompts for the WPA2 passphrase, which is never stored in this
+repo; set `PSK=` in the environment to skip the prompt. To change the SSID,
+passphrase or channel, re-run it (with `SSID=` or `CHANNEL=` set as needed).
+It deletes the old connection and creates a new one.
+
 ## What it exposes
 
 | | |
@@ -144,7 +219,15 @@ backend would have to come from PyPI. To move to a newer `websockets`, drop a
 new `websockets-*-py3-none-any.whl` in `deploy/wheels/`, delete
 `/opt/wr-mechanisms/venv` on the Pi, and re-deploy.
 
-Re-running it is the upgrade path. Then:
+The Wi-Fi access point ([Over Wi-Fi](#over-wi-fi-with-no-cable)) is a
+separate, one-time step, because it is network configuration rather than part
+of the service. `deploy.sh` copies the script over but doesn't run it:
+
+```sh
+ssh -t wr-pi 'sudo bash ~/wr-mechanisms-src/deploy/wifi-ap.sh'
+```
+
+Re-running `deploy.sh` is the upgrade path. Then:
 
 ```sh
 ssh wr-pi 'systemctl status wr-mechanisms'
@@ -221,7 +304,7 @@ routes that serve the panel. No hardware, no Pi.
 | `wr_mechanisms/server.py` | WebSocket server for the `mechanisms` topic |
 | `wr_mechanisms/http.py` | Plain-HTTP routes on the same port — the panel, `/healthz` |
 | `wr_mechanisms/static/` | Symlink to `web/mechanisms.html` |
-| `deploy/` | systemd unit, env template, install + deploy scripts, bundled wheel |
+| `deploy/` | systemd unit, env template, install + deploy scripts, bundled wheel, Wi-Fi AP script |
 
 This package deliberately shares no imports with `adc_winered` — it installs on
 a Pi that has no pyads and no PLC. The cost is `protocol.py`, a trimmed copy of
