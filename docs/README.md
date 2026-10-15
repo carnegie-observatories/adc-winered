@@ -7,6 +7,7 @@ Lean reference for the WINERED ADC control stack. One topic per file.
 | [architecture.md](architecture.md) | PLC/Python split, ADS surface, WS surface, one ASCII diagram |
 | [bring-up.md](bring-up.md) | Hardware reference (Beckhoff stack, DB25 pinout, motor/encoder specs, drivetrain) + step-by-step XAE bring-up (SDOs, NC axes, homing, ADS) |
 | [plc.md](plc.md) | TwinCAT project layout, GVLs, FBs, sim mode, rebuild/deploy |
+| [plc-guidelines.md](plc-guidelines.md) | PLC architecture rules for new Magellan instruments: ADS contract, Tc2_MC2 motion, `TcLinkTo`, simulation, and where the ADC falls short |
 | [protocol.md](protocol.md) | WS frame shapes, ADC topics, commands, error codes |
 | [correction.md](correction.md) | The IB dispersion-correction math, one page |
 | [running.md](running.md) | How to start the server: real / sim / mixed, env vars, ports |
